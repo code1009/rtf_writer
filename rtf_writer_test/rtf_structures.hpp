@@ -122,19 +122,19 @@ struct RTF_CHARACTER_FORMAT
 // RTF paragraph format structure
 struct RTF_PARAGRAPH_FORMAT
 {
-	int   paragraphBreak   ; // Sets paragraph break type
-	bool  newParagraph     ; // New paragraph
-	bool  defaultParagraph ; // Default paragraph formatting
-	int   paragraphAligment; // Sets paragraph aligment
-	int   firstLineIndent  ; // Sets first line indent (the default is 0)
-	int   leftIndent       ; // Sets paragraph left indent (the default is 0)
-	int   rightIndent      ; // Sets paragraph right indent (the default is 0)
-	int   spaceBefore      ; // Sets space before paragraph (the default is 0)
-	int   spaceAfter       ; // Sets space after paragraph (the default is 0)
-	int   lineSpacing      ; // Sets line spacing in paragraph
-	char* paragraphText    ; // Sets paragraph text
-	bool  tabbedText       ; // Sets paragraph tabbed text
-	bool  tableText        ; // Sets paragraph table text
+	int         paragraphBreak   ; // Sets paragraph break type
+	bool        newParagraph     ; // New paragraph
+	bool        defaultParagraph ; // Default paragraph formatting
+	int         paragraphAligment; // Sets paragraph aligment
+	int         firstLineIndent  ; // Sets first line indent (the default is 0)
+	int         leftIndent       ; // Sets paragraph left indent (the default is 0)
+	int         rightIndent      ; // Sets paragraph right indent (the default is 0)
+	int         spaceBefore      ; // Sets space before paragraph (the default is 0)
+	int         spaceAfter       ; // Sets space after paragraph (the default is 0)
+	int         lineSpacing      ; // Sets line spacing in paragraph
+//	const char* paragraphText    ; // Sets paragraph text
+	bool        tabbedText       ; // Sets paragraph tabbed text
+	bool        tableText        ; // Sets paragraph table text
 
 
 	bool                        paragraphTabs   ; // Paragraph has tabs

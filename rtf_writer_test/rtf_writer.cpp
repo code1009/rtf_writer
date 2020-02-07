@@ -10,7 +10,6 @@
 #include "rtf_writer.hpp"
 
 
-IPicture* _Picture = NULL;
 
 
 
@@ -19,7 +18,6 @@ IPicture* _Picture = NULL;
 rtf_writer::rtf_writer()
 {
 	_File    = NULL;
-	_Picture = NULL;
 }
 
 
@@ -79,13 +77,6 @@ int rtf_writer::close()
 {
 	// Set error flag
 	int error = RTF_SUCCESS;
-
-	// Free IPicture object
-	if ( _Picture != NULL )
-	{
-		_Picture->Release();
-		_Picture = NULL;
-	}
 
 	// Write RTF document end part
 	std::ostringstream rtfText;
@@ -184,7 +175,7 @@ void rtf_writer::set_defaultformat()
 	set_sectionformat(&sf);
 
 	// Set default RTF paragraph formatting properties
-	RTF_PARAGRAPH_FORMAT pf = {RTF_PARAGRAPHBREAK_NONE, false, true, RTF_PARAGRAPHALIGN_LEFT, 0, 0, 0, 0, 0, 0, "", false, false, false, false, false, false};
+	RTF_PARAGRAPH_FORMAT pf = {RTF_PARAGRAPHBREAK_NONE, false, true, RTF_PARAGRAPHALIGN_LEFT, 0, 0, 0, 0, 0, 0, /*NULL,*/ false, false, false, false, false, false};
 	pf.BORDERS.borderColor = 0;
 	pf.BORDERS.borderKind  = RTF_PARAGRAPHBORDERKIND_NONE;
 	pf.BORDERS.borderSpace = 0;
@@ -882,11 +873,11 @@ bool rtf_writer::write_paragraphformat()
 			<< "\\sl" << _ParFormat.lineSpacing    
 			<< font.str()
 			<< " "
-			<< _ParFormat.paragraphText;
+			<< _ParagraphText;
 	}
 	else
 	{
-		rtfText << "\\tab " << _ParFormat.paragraphText;
+		rtfText << "\\tab " << _ParagraphText;
 	}
 
 	// Writes RTF paragraph formatting properties
@@ -904,8 +895,8 @@ int rtf_writer::start_paragraph(char* text, bool newPar)
 	int error = RTF_SUCCESS;
 
 	// Copy paragraph text
-	_ParFormat.paragraphText = new char[strlen(text)];
-	strcpy( _ParFormat.paragraphText, text );
+	_ParagraphText = text;
+//	_ParFormat.paragraphText = _ParagraphText.c_str();
 
 	// Set new paragraph
 	_ParFormat.newParagraph = newPar;
@@ -942,170 +933,259 @@ RTF_PARAGRAPH_FORMAT* rtf_writer::get_paragraphformat()
 	return &_ParFormat;
 }
 
+static HGLOBAL file_to_hglobal (char* file_path)
+{
+	HGLOBAL hglobal;
+
+	int            file_handle;
+	struct _stat   file_stat;
+	unsigned int   file_size;
+	void*          file_contents;
+
+
+	hglobal = NULL;
+
+
+	file_handle = _open(file_path, _O_RDONLY | _O_BINARY);
+	if (-1!=file_handle)
+	{
+		_fstat(file_handle, &file_stat);
+		file_size = file_stat.st_size;
+
+
+		hglobal = GlobalAlloc(GMEM_MOVEABLE, file_size);
+		if (hglobal)
+		{
+			file_contents = GlobalLock(hglobal);
+
+			_read(file_handle, file_contents, file_size);
+
+			GlobalUnlock(hglobal);
+		}
+
+		_close(file_handle);
+	}
+
+	return hglobal;
+}
+
+static IPicture* image_file_to_ipicture (char* image_file_path)
+{
+	IPicture* result;
+	IPicture* ipicture;
+	IStream*  istream;
+	HGLOBAL   hglobal;
+	HRESULT   hr;
+
+	unsigned int size;
+
+
+	result   = NULL;
+	ipicture = NULL;
+	istream  = NULL;
+	hglobal  = file_to_hglobal(image_file_path);
+	if (hglobal)
+	{
+		size = GlobalSize(hglobal);
+
+		hr = CreateStreamOnHGlobal(hglobal, TRUE, &istream);
+		if (S_OK==hr)
+		{
+			hr = OleLoadPicture(istream, size, FALSE, IID_IPicture, (LPVOID*)&ipicture);
+			if (S_OK==hr)
+			{
+				result = ipicture;
+			}
+
+			istream->Release();
+		}
+
+		GlobalFree(hglobal);
+	}
+
+
+	return result;
+}
+
+static HMETAFILE ipicture_to_hmetafile (IPicture* ipicture)
+{
+	// Calculate image size
+	long hmWidth ;
+	long hmHeight;
+	int  nWidth  ;
+	int  nHeight ;
+	
+	HDC hdcMeta;
+
+	HMETAFILE hmf;
+
+
+	ipicture->get_Width (&hmWidth);
+	ipicture->get_Height(&hmHeight);
+
+	nWidth	= MulDiv( hmWidth , GetDeviceCaps(GetDC(NULL),LOGPIXELSX), 2540 );
+	nHeight	= MulDiv( hmHeight, GetDeviceCaps(GetDC(NULL),LOGPIXELSY), 2540 );
+
+	// Create metafile;
+	hdcMeta = CreateMetaFile(NULL);
+
+	// Render picture to metafile
+	ipicture->Render( hdcMeta, 0, 0, nWidth, nHeight, 0, hmHeight, hmWidth, -hmHeight, NULL );
+
+	// Close metafile
+	hmf = CloseMetaFile(hdcMeta);
+
+
+	return hmf;
+}
+
+typedef struct _image_hmetafile_data_t
+{
+	long width;
+	long height;
+	std::vector<unsigned char> binary;
+}
+image_hmetafile_data_t;
+
+static void get_image_hmetafile_data (char* image_file_path, image_hmetafile_data_t& image_hmetafile_data)
+{
+	image_hmetafile_data.width  = 0;
+	image_hmetafile_data.height = 0;
+	image_hmetafile_data.binary.clear();
+	
+
+	IPicture* ipicture;
+	HMETAFILE hmf;
+
+	unsigned int   size;
+	unsigned char* pointer;
+
+
+	ipicture = image_file_to_ipicture(image_file_path);
+	if (ipicture)
+	{
+		ipicture->get_Width (&image_hmetafile_data.width );
+		ipicture->get_Height(&image_hmetafile_data.height);
+
+		hmf = ipicture_to_hmetafile(ipicture);
+		if (hmf)
+		{
+			size = GetMetaFileBitsEx( hmf, 0, NULL );
+
+			image_hmetafile_data.binary.assign(size, 0);
+			pointer = & *image_hmetafile_data.binary.begin();
+
+			GetMetaFileBitsEx( hmf, size, pointer );
+
+			DeleteMetaFile(hmf);
+		}
+
+		ipicture->Release();
+	}
+}
 
 // Loads image from file
-int rtf_writer::load_image(char* image, int width, int height)
+int rtf_writer::load_image(char* image_file_path, int width, int height)
 {
 	// Set error flag
 	int error = RTF_SUCCESS;
 
-	// Check image type
-	bool err = false;
-	if ( strstr(image,".bmp") == NULL )
+	// RTF document text
+	std::ostringstream rtfText;
+
+
+	image_hmetafile_data_t image_hmetafile_data;
+
+
+	get_image_hmetafile_data(image_file_path, image_hmetafile_data);
+	if ( image_hmetafile_data.binary.empty() )
 	{
-		if ( strstr(image,".jpg") == NULL )
-		{
-			if (strstr(image,".gif") == NULL )
-				err = true;
-		}
+		rtfText << "\n\\par\\pard " << "ERROR:" << image_file_path << "\\par";
+
+		fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
+
+		return 0;
 	}
 
-	// If valid image type
-	if ( err == false )
-	{
-		// Free IPicture object
-		if ( _Picture != NULL )
-		{
-			_Picture->Release();
-			_Picture = NULL;
-		}
 
-		// Read image file
-		int imageFile = _open( image, _O_RDONLY | _O_BINARY );
-		struct _stat st;
-		_fstat( imageFile, &st );
-		DWORD nSize = st.st_size;
-		BYTE* pBuff = new BYTE[nSize];
-		_read( imageFile, pBuff, nSize );
-		// Alocate memory for image data
-		HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, nSize);
-		void* pData = GlobalLock(hGlobal);
-		memcpy(pData, pBuff, nSize);
-		GlobalUnlock(hGlobal);
-		// Load image using OLE
-		IStream* pStream = NULL;
-		if ( CreateStreamOnHGlobal(hGlobal, TRUE, &pStream) == S_OK )
-		{
-			HRESULT hr;
-			if ((hr = OleLoadPicture( pStream, nSize, FALSE, IID_IPicture, (LPVOID *)&_Picture)) != S_OK)
-				error = RTF_IMAGE_ERROR;
+	unsigned int   size;
+	unsigned char* pointer;
+	std::string    hex;
 
-			pStream->Release();
-		}
-		delete []pBuff;
-		_close(imageFile);
+	pointer = & *image_hmetafile_data.binary.begin();
+	size    =    image_hmetafile_data.binary.size();
 
-		// If image is loaded
-		if ( _Picture != NULL )
-		{
-			// Calculate image size
-			long hmWidth;
-			long hmHeight;
-			_Picture->get_Width(&hmWidth);
-			_Picture->get_Height(&hmHeight);
-			int nWidth	= MulDiv( hmWidth, GetDeviceCaps(GetDC(NULL),LOGPIXELSX), 2540 );
-			int nHeight	= MulDiv( hmHeight, GetDeviceCaps(GetDC(NULL),LOGPIXELSY), 2540 );
+	hex = binary_to_hex( pointer, size );
 
-			// Create metafile;
-			HDC hdcMeta = CreateMetaFile(NULL);
+	// Format picture paragraph
+	RTF_PARAGRAPH_FORMAT* pf = get_paragraphformat();
+//	pf->paragraphText = NULL;
+	_ParagraphText.clear();
+	write_paragraphformat();
 
-			// Render picture to metafile
-			_Picture->Render( hdcMeta, 0, 0, nWidth, nHeight, 0, hmHeight, hmWidth, -hmHeight, NULL );
+	// Writes RTF picture data
+	rtfText
+		<< "\n"
+		<< "{"
+		<< "\\pict\\wmetafile8"
+		<< "\\picwgoal"  << image_hmetafile_data.width 
+		<< "\\pichgoal"  << image_hmetafile_data.height
+		<< "\\picscalex" << width
+		<< "\\picscaley" << height
+		<< "\n"
+		<< hex
+		<< "}"
+		;
 
-			// Close metafile
-			HMETAFILE hmf = CloseMetaFile(hdcMeta);
+	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
 
-			// Get metafile data
-			UINT size = GetMetaFileBitsEx( hmf, 0, NULL );
-			BYTE* buffer = new BYTE[size];
-			GetMetaFileBitsEx( hmf, size, buffer );
-			DeleteMetaFile(hmf);
-
-			// Convert metafile binary data to hexadecimal
-			char* str = bin_hex_convert( buffer, size );
-			delete []buffer;
-
-			// Format picture paragraph
-			RTF_PARAGRAPH_FORMAT* pf = get_paragraphformat();
-			pf->paragraphText = "";
-			write_paragraphformat();
-
-			// Writes RTF picture data
-			char rtfText[1024];
-			sprintf( rtfText, "\n{\\pict\\wmetafile8\\picwgoal%d\\pichgoal%d\\picscalex%d\\picscaley%d\n", hmWidth, hmHeight, width, height );
-			if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-				error = RTF_IMAGE_ERROR;
-			fwrite( str, 1, 2*size, _File );
-			strcpy( rtfText, "}" );
-			fwrite( rtfText, 1, strlen(rtfText), _File );
-		}
-	}
-	else
-	{
-		// Writes RTF picture data
-		char rtfText[1024];
-		strcpy( rtfText, "\n\\par\\pard *** Error! Wrong image format ***\\par" );
-		fwrite( rtfText, 1, strlen(rtfText), _File );
-	}
 
 	// Return error flag
-	return error;
+	return 0;
 }
 
 
 // Converts binary data to hex
-char* rtf_writer::bin_hex_convert(unsigned char* binary, int size)
+std::string rtf_writer::binary_to_hex(unsigned char* binary, int size)
 {
-	char* result = new char[2*size];
+	std::string str;
+	str.reserve(size*2);
 
-	char part1, part2;
-	for ( int i=0; i<size; i++ )
+	std::ostringstream hex(str);
+
+	unsigned char ch;
+	char part1;
+	char part2;
+	int  i;
+
+	for (i=0; i<size; i++ )
 	{
-		part1 = binary[i] / 16;
+		ch = binary[i];
+
+		part1 =  ch / 16;
 		if ( part1 < 10 )
-			part1 += 48;
+		{
+			part1 = '0' + part1;
+		}
 		else
 		{
-			if ( part1 == 10 )
-				part1 = 'a';
-			if ( part1 == 11 )
-				part1 = 'b';
-			if ( part1 == 12 )
-				part1 = 'c';
-			if ( part1 == 13 )
-				part1 = 'd';
-			if ( part1 == 14 )
-				part1 = 'e';
-			if ( part1 == 15 )
-				part1 = 'f';
+			part1 = 'a' + (part1-10);
 		}
 
-		part2 = binary[i] % 16;
+		part2 = ch % 16;
 		if ( part2 < 10 )
-			part2 += 48;
+		{
+			part2 = '0' + part2;
+		}
 		else
 		{
-			if ( part2 == 10 )
-				part2 = 'a';
-			if ( part2 == 11 )
-				part2 = 'b';
-			if ( part2 == 12 )
-				part2 = 'c';
-			if ( part2 == 13 )
-				part2 = 'd';
-			if ( part2 == 14 )
-				part2 = 'e';
-			if ( part2 == 15 )
-				part2 = 'f';
+			part2 = 'a' + (part2-10);
 		}
 
-		result[2*i] = part1;
-		result[2*i+1] = part2;
+		hex << part1 << part2;
 	}
 
-	strcat( result, "\0" );
-
-	return result;
+	return hex.str();
 }
 
 
@@ -1115,32 +1195,46 @@ int rtf_writer::start_tablerow()
 	// Set error flag
 	int error = RTF_SUCCESS;
 
-	char tblrw[1024] = "";
+	std::ostringstream rtfText;
+
+
 	// Format table row aligment
+	std::ostringstream text;
 	switch (_RowFormat.rowAligment)
 	{
-		// Left align
-		case RTF_ROWTEXTALIGN_LEFT:
-			strcat( tblrw, "\\trql" );
-			break;
+	// Left align
+	case RTF_ROWTEXTALIGN_LEFT:
+		text << "\\trql";
+		break;
 
-		// Center align
-		case RTF_ROWTEXTALIGN_CENTER:
-			strcat( tblrw, "\\trqc" );
-			break;
+	// Center align
+	case RTF_ROWTEXTALIGN_CENTER:
+		text << "\\trqc";
+		break;
 
-		// Right align
-		case RTF_ROWTEXTALIGN_RIGHT:
-			strcat( tblrw, "\\trqr" );
-			break;
+	// Right align
+	case RTF_ROWTEXTALIGN_RIGHT:
+		text << "\\trqr";
+		break;
 	}
 
 	// Writes RTF table data
-	char rtfText[1024];
-	sprintf( rtfText, "\n\\trowd\\trgaph115%s\\trleft%d\\trrh%d\\trpaddb%d\\trpaddfb3\\trpaddl%d\\trpaddfl3\\trpaddr%d\\trpaddfr3\\trpaddt%d\\trpaddft3", 
-		tblrw, _RowFormat.rowLeftMargin, _RowFormat.rowHeight, _RowFormat.marginTop, _RowFormat.marginBottom, _RowFormat.marginLeft, _RowFormat.marginRight );
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		error = RTF_TABLE_ERROR;
+	rtfText
+		<< "\n"
+		<< "\\trowd"
+		<< "\\trgaph115" << text.str()
+		<< "\\trleft"    << _RowFormat.rowLeftMargin
+		<< "\\trrh"      << _RowFormat.rowHeight
+		<< "\\trpaddb"   << _RowFormat.marginTop
+		<< "\\trpaddfb3"
+		<< "\\trpaddl"   << _RowFormat.marginBottom
+		<< "\\trpaddfl3"
+		<< "\\trpaddr"   << _RowFormat.marginLeft
+		<< "\\trpaddfr3"
+		<< "\\trpaddt"   << _RowFormat.marginRight
+		<< "\\trpaddft3";
+
+	fwrite(rtfText.str().c_str(), 1, rtfText.str().size(), _File);
 
 	// Return error flag
 	return error;
@@ -1153,11 +1247,17 @@ int rtf_writer::end_tablerow()
 	// Set error flag
 	int error = RTF_SUCCESS;
 
+	std::ostringstream rtfText;
+
+
 	// Writes RTF table data
-	char rtfText[1024];
-	sprintf( rtfText, "\n\\trgaph115\\row\\pard" );
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		error = RTF_TABLE_ERROR;
+	rtfText
+		<< "\n"
+		<< "\\trgaph115"
+		<< "\\row"
+		<< "\\pard";
+
+	fwrite(rtfText.str().c_str(), 1, rtfText.str().size(), _File);
 
 	// Return error flag
 	return error;
@@ -1170,118 +1270,127 @@ int rtf_writer::start_tablecell(int rightMargin)
 	// Set error flag
 	int error = RTF_SUCCESS;
 
-	char tblcla[20];
+	std::ostringstream rtfText;
+
 	// Format table cell text aligment
+	std::ostringstream text;
 	switch (_CellFormat.textVerticalAligment)
 	{
-		// Top align
-		case RTF_CELLTEXTALIGN_TOP:
-			strcpy( tblcla, "\\clvertalt" );
-			break;
+	// Top align
+	case RTF_CELLTEXTALIGN_TOP:
+		text << "\\clvertalt";
+		break;
 
-		// Center align
-		case RTF_CELLTEXTALIGN_CENTER:
-			strcpy( tblcla, "\\clvertalc" );
-			break;
+	// Center align
+	case RTF_CELLTEXTALIGN_CENTER:
+		text << "\\clvertalc";
+		break;
 
-		// Bottom align
-		case RTF_CELLTEXTALIGN_BOTTOM:
-			strcpy( tblcla, "\\clvertalb" );
-			break;
+	// Bottom align
+	case RTF_CELLTEXTALIGN_BOTTOM:
+		text << "\\clvertalb";
+		break;
 	}
 
-	char tblcld[20];
 	// Format table cell text direction
 	switch (_CellFormat.textDirection)
 	{
-		// Left to right, top to bottom
-		case RTF_CELLTEXTDIRECTION_LRTB:
-			strcpy( tblcld, "\\cltxlrtb" );
-			break;
+	// Left to right, top to bottom
+	case RTF_CELLTEXTDIRECTION_LRTB:
+		text << "\\cltxlrtb";
+		break;
 
-		// Right to left, top to bottom
-		case RTF_CELLTEXTDIRECTION_RLTB:
-			strcpy( tblcld, "\\cltxtbrl" );
-			break;
+	// Right to left, top to bottom
+	case RTF_CELLTEXTDIRECTION_RLTB:
+		text << "\\cltxtbrl";
+		break;
 
-		// Left to right, bottom to top
-		case RTF_CELLTEXTDIRECTION_LRBT:
-			strcpy( tblcld, "\\cltxbtlr" );
-			break;
+	// Left to right, bottom to top
+	case RTF_CELLTEXTDIRECTION_LRBT:
+		text << "\\cltxbtlr";
+		break;
 
-		// Left to right, top to bottom, vertical
-		case RTF_CELLTEXTDIRECTION_LRTBV:
-			strcpy( tblcld, "\\cltxlrtbv" );
-			break;
+	// Left to right, top to bottom, vertical
+	case RTF_CELLTEXTDIRECTION_LRTBV:
+		text << "\\cltxlrtbv";
+		break;
 
-		// Right to left, top to bottom, vertical
-		case RTF_CELLTEXTDIRECTION_RLTBV:
-			strcpy( tblcld, "\\cltxtbrlv" );
-			break;
+	// Right to left, top to bottom, vertical
+	case RTF_CELLTEXTDIRECTION_RLTBV:
+		text << "\\cltxtbrlv";
+		break;
 	}
 
-	char tbclbrb[1024]="", tbclbrl[1024]="", tbclbrr[1024]="", tbclbrt[1024]="";
 	// Format table cell border
+	std::ostringstream border;
 	if ( _CellFormat.borderBottom.border == true )
 	{
 		// Bottom cell border
-		char tbclbt[20];
-		strcpy( tbclbt, "\\clbrdrb" );
-
-		char* border = get_bordername(_CellFormat.borderBottom.BORDERS.borderType);
-
-		sprintf( tbclbrb, "%s%s\\brdrw%d\\brsp%d\\brdrcf%d", tbclbt, border, _CellFormat.borderBottom.BORDERS.borderWidth, 
-			_CellFormat.borderBottom.BORDERS.borderSpace, _CellFormat.borderBottom.BORDERS.borderColor );
+		border
+			<< "\\clbrdrb"
+			<< get_bordername(_CellFormat.borderBottom.BORDERS.borderType)
+			<< "\\brdrw"  << _CellFormat.borderBottom.BORDERS.borderWidth
+			<< "\\brsp"   << _CellFormat.borderBottom.BORDERS.borderSpace
+			<< "\\brdrcf" << _CellFormat.borderBottom.BORDERS.borderColor
+			;
 	}
 	if ( _CellFormat.borderLeft.border == true )
 	{
 		// Left cell border
-		char tbclbt[20];
-		strcpy( tbclbt, "\\clbrdrl" );
-
-		char* border = get_bordername(_CellFormat.borderLeft.BORDERS.borderType);
-
-		sprintf( tbclbrl, "%s%s\\brdrw%d\\brsp%d\\brdrcf%d", tbclbt, border, _CellFormat.borderLeft.BORDERS.borderWidth, 
-		_CellFormat.borderLeft.BORDERS.borderSpace, _CellFormat.borderLeft.BORDERS.borderColor );
+		border
+			<< "\\clbrdrl"
+			<< get_bordername(_CellFormat.borderLeft.BORDERS.borderType)
+			<< "\\brdrw"  << _CellFormat.borderLeft.BORDERS.borderWidth
+			<< "\\brsp"   << _CellFormat.borderLeft.BORDERS.borderSpace
+			<< "\\brdrcf" << _CellFormat.borderLeft.BORDERS.borderColor
+			;
 	}
 	if ( _CellFormat.borderRight.border == true )
 	{
 		// Right cell border
-		char tbclbt[20];
-		strcpy( tbclbt, "\\clbrdrr" );
-
-		char* border = get_bordername(_CellFormat.borderRight.BORDERS.borderType);
-
-		sprintf( tbclbrr, "%s%s\\brdrw%d\\brsp%d\\brdrcf%d", tbclbt, border, _CellFormat.borderRight.BORDERS.borderWidth, 
-		_CellFormat.borderRight.BORDERS.borderSpace, _CellFormat.borderRight.BORDERS.borderColor );
+		border
+			<< "\\clbrdrr"
+			<< get_bordername(_CellFormat.borderRight.BORDERS.borderType)
+			<< "\\brdrw"  << _CellFormat.borderRight.BORDERS.borderWidth
+			<< "\\brsp"   << _CellFormat.borderRight.BORDERS.borderSpace
+			<< "\\brdrcf" << _CellFormat.borderRight.BORDERS.borderColor
+			;
 	}
 	if ( _CellFormat.borderTop.border == true )
 	{
 		// Top cell border
-		char tbclbt[20];
-		strcpy( tbclbt, "\\clbrdrt" );
-
-		char* border = get_bordername(_CellFormat.borderTop.BORDERS.borderType);
-
-		sprintf( tbclbrt, "%s%s\\brdrw%d\\brsp%d\\brdrcf%d", tbclbt, border, _CellFormat.borderTop.BORDERS.borderWidth, 
-		_CellFormat.borderTop.BORDERS.borderSpace, _CellFormat.borderTop.BORDERS.borderColor );
+		border
+			<< "\\clbrdrt"
+			<< get_bordername(_CellFormat.borderTop.BORDERS.borderType)
+			<< "\\brdrw"  << _CellFormat.borderTop.BORDERS.borderWidth
+			<< "\\brsp"   << _CellFormat.borderTop.BORDERS.borderSpace
+			<< "\\brdrcf" << _CellFormat.borderTop.BORDERS.borderColor
+			;
 	}
 
 	// Format table cell shading
-	char shading[100] = "";
+	std::ostringstream shading;
 	if ( _CellFormat.cellShading == true )
 	{
-		char* sh = get_shadingname( _CellFormat.SHADING.shadingType, true );
-
 		// Set paragraph shading color
-		sprintf( shading, "%s\\clshdgn%d\\clcfpat%d\\clcbpat%d", sh, _CellFormat.SHADING.shadingIntensity, _CellFormat.SHADING.shadingFillColor, _CellFormat.SHADING.shadingBkColor );
+		shading
+			<< get_shadingname(_CellFormat.SHADING.shadingType, true)
+			<< "\\clshdgn" << _CellFormat.SHADING.shadingIntensity
+			<< "\\clcfpat" << _CellFormat.SHADING.shadingFillColor
+			<< "\\clcbpat" << _CellFormat.SHADING.shadingBkColor
+			;
 	}
 
 	// Writes RTF table data
-	char rtfText[1024];
-	sprintf( rtfText, "\n\\tcelld%s%s%s%s%s%s%s\\cellx%d", tblcla, tblcld, tbclbrb, tbclbrl, tbclbrr, tbclbrt, shading, rightMargin );
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		error = RTF_TABLE_ERROR;
+	rtfText
+		<< "\n"
+		<< "\\tcelld"
+		<< text.str()
+		<< border.str()
+		<< shading.str()
+		<< "\\cellx" << rightMargin;
+
+	fwrite(rtfText.str().c_str(), 1, rtfText.str().size(), _File);
 
 	// Return error flag
 	return error;
@@ -1339,101 +1448,101 @@ void rtf_writer::set_tablecellformat(RTF_TABLECELL_FORMAT* cf)
 
 
 // Gets border name
-char* rtf_writer::get_bordername(int border_type)
+std::string rtf_writer::get_bordername(int border_type)
 {
-	char* border = new char[20];
+	std::string border;
 
 	switch (border_type)
 	{
-		// Single-thickness border
-		case RTF_PARAGRAPHBORDERTYPE_STHICK:
-			strcpy( border, "\\brdrs" );
-			break;
+	// Single-thickness border
+	case RTF_PARAGRAPHBORDERTYPE_STHICK:
+		border ="\\brdrs";
+		break;
 
-		// Double-thickness border
-		case RTF_PARAGRAPHBORDERTYPE_DTHICK:
-			strcpy( border, "\\brdrth" );
-			break;
+	// Double-thickness border
+	case RTF_PARAGRAPHBORDERTYPE_DTHICK:
+		border ="\\brdrth";
+		break;
 
-		// Shadowed border
-		case RTF_PARAGRAPHBORDERTYPE_SHADOW:
-			strcpy( border, "\\brdrsh" );
-			break;
+	// Shadowed border
+	case RTF_PARAGRAPHBORDERTYPE_SHADOW:
+		border ="\\brdrsh";
+		break;
 
-		// Double border
-		case RTF_PARAGRAPHBORDERTYPE_DOUBLE:
-			strcpy( border, "\\brdrdb" );
-			break;
+	// Double border
+	case RTF_PARAGRAPHBORDERTYPE_DOUBLE:
+		border ="\\brdrdb";
+		break;
 
-		// Dotted border
-		case RTF_PARAGRAPHBORDERTYPE_DOT:
-			strcpy( border, "\\brdrdot" );
-			break;
+	// Dotted border
+	case RTF_PARAGRAPHBORDERTYPE_DOT:
+		border ="\\brdrdot";
+		break;
 
-		// Dashed border
-		case RTF_PARAGRAPHBORDERTYPE_DASH:
-			strcpy( border, "\\brdrdash" );
-			break;
+	// Dashed border
+	case RTF_PARAGRAPHBORDERTYPE_DASH:
+		border ="\\brdrdash";
+		break;
 
-		// Hairline border
-		case RTF_PARAGRAPHBORDERTYPE_HAIRLINE:
-			strcpy( border, "\\brdrhair" );
-			break;
+	// Hairline border
+	case RTF_PARAGRAPHBORDERTYPE_HAIRLINE:
+		border ="\\brdrhair";
+		break;
 
-		// Inset border
-		case RTF_PARAGRAPHBORDERTYPE_INSET:
-			strcpy( border, "\\brdrinset" );
-			break;
+	// Inset border
+	case RTF_PARAGRAPHBORDERTYPE_INSET:
+		border ="\\brdrinset";
+		break;
 
-		// Dashed border (small)
-		case RTF_PARAGRAPHBORDERTYPE_SDASH:
-			strcpy( border, "\\brdrdashsm" );
-			break;
+	// Dashed border (small)
+	case RTF_PARAGRAPHBORDERTYPE_SDASH:
+		border ="\\brdrdashsm";
+		break;
 
-		// Dot-dashed border
-		case RTF_PARAGRAPHBORDERTYPE_DOTDASH:
-			strcpy( border, "\\brdrdashd" );
-			break;
+	// Dot-dashed border
+	case RTF_PARAGRAPHBORDERTYPE_DOTDASH:
+		border ="\\brdrdashd";
+		break;
 
-		// Dot-dot-dashed border
-		case RTF_PARAGRAPHBORDERTYPE_DOTDOTDASH:
-			strcpy( border, "\\brdrdashdd" );
-			break;
+	// Dot-dot-dashed border
+	case RTF_PARAGRAPHBORDERTYPE_DOTDOTDASH:
+		border ="\\brdrdashdd";
+		break;
 
-		// Outset border
-		case RTF_PARAGRAPHBORDERTYPE_OUTSET:
-			strcpy( border, "\\brdroutset" );
-			break;
+	// Outset border
+	case RTF_PARAGRAPHBORDERTYPE_OUTSET:
+		border ="\\brdroutset";
+		break;
 
-		// Triple border
-		case RTF_PARAGRAPHBORDERTYPE_TRIPLE:
-			strcpy( border, "\\brdrtriple" );
-			break;
+	// Triple border
+	case RTF_PARAGRAPHBORDERTYPE_TRIPLE:
+		border ="\\brdrtriple";
+		break;
 
-		// Wavy border
-		case RTF_PARAGRAPHBORDERTYPE_WAVY:
-			strcpy( border, "\\brdrwavy" );
-			break;
+	// Wavy border
+	case RTF_PARAGRAPHBORDERTYPE_WAVY:
+		border ="\\brdrwavy";
+		break;
 
-		// Double wavy border
-		case RTF_PARAGRAPHBORDERTYPE_DWAVY:
-			strcpy( border, "\\brdrwavydb" );
-			break;
+	// Double wavy border
+	case RTF_PARAGRAPHBORDERTYPE_DWAVY:
+		border ="\\brdrwavydb";
+		break;
 
-		// Striped border
-		case RTF_PARAGRAPHBORDERTYPE_STRIPED:
-			strcpy( border, "\\brdrdashdotstr" );
-			break;
+	// Striped border
+	case RTF_PARAGRAPHBORDERTYPE_STRIPED:
+		border ="\\brdrdashdotstr";
+		break;
 
-		// Embossed border
-		case RTF_PARAGRAPHBORDERTYPE_EMBOSS:
-			strcpy( border, "\\brdremboss" );
-			break;
+	// Embossed border
+	case RTF_PARAGRAPHBORDERTYPE_EMBOSS:
+		border ="\\brdremboss";
+		break;
 
-		// Engraved border
-		case RTF_PARAGRAPHBORDERTYPE_ENGRAVE:
-			strcpy( border, "\\brdrengrave" );
-			break;
+	// Engraved border
+	case RTF_PARAGRAPHBORDERTYPE_ENGRAVE:
+		border ="\\brdrengrave";
+		break;
 	}
 
 	return border;
@@ -1441,148 +1550,148 @@ char* rtf_writer::get_bordername(int border_type)
 
 
 // Gets shading name
-char* rtf_writer::get_shadingname(int shading_type, bool cell)
+std::string rtf_writer::get_shadingname(int shading_type, bool cell)
 {
-	char* shading = new char[20];
+	std::string shading;
 
 	if ( cell == false )
 	{
 		switch (shading_type)
 		{
-			// Fill shading
-			case RTF_PARAGRAPHSHADINGTYPE_FILL:
-				strcpy( shading, "" );
-				break;
+		// Fill shading
+		case RTF_PARAGRAPHSHADINGTYPE_FILL:
+			shading = "";
+			break;
 
-			// Horizontal background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_HORIZ:
-				strcpy( shading, "\\bghoriz" );
-				break;
+		// Horizontal background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_HORIZ:
+			shading = "\\bghoriz";
+			break;
 
-			// Vertical background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_VERT:
-				strcpy( shading, "\\bgvert" );
-				break;
+		// Vertical background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_VERT:
+			shading = "\\bgvert";
+			break;
 
-			// Forward diagonal background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_FDIAG:
-				strcpy( shading, "\\bgfdiag" );
-				break;
+		// Forward diagonal background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_FDIAG:
+			shading = "\\bgfdiag";
+			break;
 
-			// Backward diagonal background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_BDIAG:
-				strcpy( shading, "\\bgbdiag" );
-				break;
+		// Backward diagonal background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_BDIAG:
+			shading = "\\bgbdiag";
+			break;
 
-			// Cross background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_CROSS:
-				strcpy( shading, "\\bgcross" );
-				break;
+		// Cross background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_CROSS:
+			shading = "\\bgcross";
+			break;
 
-			// Diagonal cross background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_CROSSD:
-				strcpy( shading, "\\bgdcross" );
-				break;
+		// Diagonal cross background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_CROSSD:
+			shading = "\\bgdcross";
+			break;
 
-			// Dark horizontal background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_DHORIZ:
-				strcpy( shading, "\\bgdkhoriz" );
-				break;
+		// Dark horizontal background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_DHORIZ:
+			shading = "\\bgdkhoriz";
+			break;
 
-			// Dark vertical background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_DVERT:
-				strcpy( shading, "\\bgdkvert" );
-				break;
+		// Dark vertical background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_DVERT:
+			shading = "\\bgdkvert";
+			break;
 
-			// Dark forward diagonal background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_DFDIAG:
-				strcpy( shading, "\\bgdkfdiag" );
-				break;
+		// Dark forward diagonal background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_DFDIAG:
+			shading = "\\bgdkfdiag";
+			break;
 
-			// Dark backward diagonal background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_DBDIAG:
-				strcpy( shading, "\\bgdkbdiag" );
-				break;
+		// Dark backward diagonal background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_DBDIAG:
+			shading = "\\bgdkbdiag";
+			break;
 
-			// Dark cross background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_DCROSS:
-				strcpy( shading, "\\bgdkcross" );
-				break;
+		// Dark cross background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_DCROSS:
+			shading = "\\bgdkcross";
+			break;
 
-			// Dark diagonal cross background pattern
-			case RTF_PARAGRAPHSHADINGTYPE_DCROSSD:
-				strcpy( shading, "\\bgdkdcross" );
-				break;
+		// Dark diagonal cross background pattern
+		case RTF_PARAGRAPHSHADINGTYPE_DCROSSD:
+			shading = "\\bgdkdcross";
+			break;
 		}
 	}
 	else
 	{
 		switch (shading_type)
 		{
-			// Fill shading
-			case RTF_CELLSHADINGTYPE_FILL:
-				strcpy( shading, "" );
-				break;
+		// Fill shading
+		case RTF_CELLSHADINGTYPE_FILL:
+			shading = "";
+			break;
 
-			// Horizontal background pattern
-			case RTF_CELLSHADINGTYPE_HORIZ:
-				strcpy( shading, "\\clbghoriz" );
-				break;
+		// Horizontal background pattern
+		case RTF_CELLSHADINGTYPE_HORIZ:
+			shading = "\\clbghoriz";
+			break;
 
-			// Vertical background pattern
-			case RTF_CELLSHADINGTYPE_VERT:
-				strcpy( shading, "\\clbgvert" );
-				break;
+		// Vertical background pattern
+		case RTF_CELLSHADINGTYPE_VERT:
+			shading = "\\clbgvert";
+			break;
 
-			// Forward diagonal background pattern
-			case RTF_CELLSHADINGTYPE_FDIAG:
-				strcpy( shading, "\\clbgfdiag" );
-				break;
+		// Forward diagonal background pattern
+		case RTF_CELLSHADINGTYPE_FDIAG:
+			shading = "\\clbgfdiag";
+			break;
 
-			// Backward diagonal background pattern
-			case RTF_CELLSHADINGTYPE_BDIAG:
-				strcpy( shading, "\\clbgbdiag" );
-				break;
+		// Backward diagonal background pattern
+		case RTF_CELLSHADINGTYPE_BDIAG:
+			shading = "\\clbgbdiag";
+			break;
 
-			// Cross background pattern
-			case RTF_CELLSHADINGTYPE_CROSS:
-				strcpy( shading, "\\clbgcross" );
-				break;
+		// Cross background pattern
+		case RTF_CELLSHADINGTYPE_CROSS:
+			shading = "\\clbgcross";
+			break;
 
-			// Diagonal cross background pattern
-			case RTF_CELLSHADINGTYPE_CROSSD:
-				strcpy( shading, "\\clbgdcross" );
-				break;
+		// Diagonal cross background pattern
+		case RTF_CELLSHADINGTYPE_CROSSD:
+			shading = "\\clbgdcross";
+			break;
 
-			// Dark horizontal background pattern
-			case RTF_CELLSHADINGTYPE_DHORIZ:
-				strcpy( shading, "\\clbgdkhoriz" );
-				break;
+		// Dark horizontal background pattern
+		case RTF_CELLSHADINGTYPE_DHORIZ:
+			shading = "\\clbgdkhoriz";
+			break;
 
-			// Dark vertical background pattern
-			case RTF_CELLSHADINGTYPE_DVERT:
-				strcpy( shading, "\\clbgdkvert" );
-				break;
+		// Dark vertical background pattern
+		case RTF_CELLSHADINGTYPE_DVERT:
+			shading = "\\clbgdkvert";
+			break;
 
-			// Dark forward diagonal background pattern
-			case RTF_CELLSHADINGTYPE_DFDIAG:
-				strcpy( shading, "\\clbgdkfdiag" );
-				break;
+		// Dark forward diagonal background pattern
+		case RTF_CELLSHADINGTYPE_DFDIAG:
+			shading = "\\clbgdkfdiag";
+			break;
 
-			// Dark backward diagonal background pattern
-			case RTF_CELLSHADINGTYPE_DBDIAG:
-				strcpy( shading, "\\clbgdkbdiag" );
-				break;
+		// Dark backward diagonal background pattern
+		case RTF_CELLSHADINGTYPE_DBDIAG:
+			shading = "\\clbgdkbdiag";
+			break;
 
-			// Dark cross background pattern
-			case RTF_CELLSHADINGTYPE_DCROSS:
-				strcpy( shading, "\\clbgdkcross" );
-				break;
+		// Dark cross background pattern
+		case RTF_CELLSHADINGTYPE_DCROSS:
+			shading = "\\clbgdkcross";
+			break;
 
-			// Dark diagonal cross background pattern
-			case RTF_CELLSHADINGTYPE_DCROSSD:
-				strcpy( shading, "\\clbgdkdcross" );
-				break;
+		// Dark diagonal cross background pattern
+		case RTF_CELLSHADINGTYPE_DCROSSD:
+			shading = "\\clbgdkdcross";
+			break;
 		}
 	}
 
