@@ -17,11 +17,13 @@ void rtf_writer_test (void)
 
 
 	// Set RTF document font and color table
-	char font_list[] = "Times New Roman;Arial;";
-	char color_list[] = "0;0;0;255;0;0;192;192;192;255;255;255";
-	
-	// Open RTF file
-	rtf.open( "d:\\Sample.rtf", font_list, color_list );
+	rtf.initialize();
+	rtf.reset_fonttable();
+	rtf.reset_colortable();
+	rtf.add_font("굴림", 0, 129);
+
+	// Open RTF
+	rtf.open();
 
 	//-----------------------------------------------------------------------
 	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
@@ -54,17 +56,17 @@ void rtf_writer_test (void)
 	{
 		rtf.start_tablecell(2000);
 		{
-			rtf.start_paragraph( "xxxx1", true );
+			rtf.start_paragraph( "한글1", false );
 		}
 		rtf.end_tablecell();
 		rtf.start_tablecell(4000);
 		{
-			rtf.start_paragraph( "xxxx2", true );
+			rtf.start_paragraph( "한글2", false );
 		}
 		rtf.end_tablecell();
 		rtf.start_tablecell(6000);
 		{
-			rtf.start_paragraph( "xxxx2", true );
+			rtf.start_paragraph( "한글3", false );
 		}
 		rtf.end_tablecell();
 	}
@@ -357,16 +359,14 @@ void rtf_writer_test (void)
 	rtf.end_tablerow();
 
 	//-----------------------------------------------------------------------
-	// Close RTF file
+	// Close RTF
 	rtf.close();
 
-	/*
 	{
-	int _File = fopen( filename, "w" );
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-	fclose(_File);
+		FILE* _File = fopen( "d:\\Sample.rtf", "w" );
+		fwrite( rtf._oss.str().c_str(), 1, rtf._oss.str().size(), _File );
+		fclose(_File);
 	}
-	*/
 }
 
 int _tmain(int argc, _TCHAR* argv[])

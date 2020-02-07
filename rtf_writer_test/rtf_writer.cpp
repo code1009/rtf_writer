@@ -17,114 +17,172 @@
 //===========================================================================
 rtf_writer::rtf_writer()
 {
-	_File    = NULL;
-}
+	_Codepage     = RTF_DEFAULT_CODEPAGE    ;
+	_LanguageID   = RTF_DEFAULT_LANGUAGEID  ;
+	_LanguageIDFe = RTF_DEFAULT_LANGUAGEIDFE;
 
+	_FontCount = 0;
+}
 
 rtf_writer::~rtf_writer()
 {
 }
 
-// Creates new RTF document
-int rtf_writer::open( char* filename, char* fonts, char* colors )
+std::string rtf_writer::to_129 (std::string l)
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
+	std::string h;
 
+	unsigned char ch;
+	unsigned int i;
+	unsigned int count;
+
+	char part1;
+	char part2;
+
+
+	// \'b0\'a1
+	count = l.size();
+	h.reserve(count*2);
+	for (i=0u; i<count; i++)
+	{
+		ch = l.at(i);
+
+		if (ch<128)
+		{
+			h.push_back(ch);
+		}
+		else
+		{
+			h.push_back('\\');
+			h.push_back('\'');
+
+			part1 =  ch / 16;
+			if ( part1 < 10 )
+			{
+				part1 = '0' + part1;
+			}
+			else
+			{
+				part1 = 'a' + (part1-10);
+			}
+
+			part2 = ch % 16;
+			if ( part2 < 10 )
+			{
+				part2 = '0' + part2;
+			}
+			else
+			{
+				part2 = 'a' + (part2-10);
+			}
+
+			h.push_back(part1);
+			h.push_back(part2);
+		}
+	}
+
+	return h;
+}
+
+void rtf_writer::initialize()
+{
 	// Initialize global params
-	init();
-#if 0
-	// Set RTF document font table
-	if ( fonts != NULL )
-	{
-		if ( strcmp( fonts, "" ) != 0 )
-			set_fonttable(fonts);
-	}
+	set_defaultfont();
+	set_defaultcolor();
+	set_defaultformat();
+}
 
-	// Set RTF document color table
-	if ( colors != NULL )
-	{
-		if ( strcmp( colors, "" ) != 0 )
-			set_colortable(colors);
-	}
-#endif
-	// Create RTF document
-	_File = fopen( filename, "w" );
+// Open RTF document
+void rtf_writer::open()
+{
+	std::string s;
 
-	if ( _File != NULL )
-	{
-		// Write RTF document header
-		if ( !write_header() )
-			error = RTF_HEADER_ERROR;
+	s.reserve(1024*1024);
+	_oss.str(s);
 
-		// Write RTF document formatting properties
-		if ( !write_documentformat() )
-			error = RTF_DOCUMENTFORMAT_ERROR;
 
-		// Create first RTF document section with default formatting
-		write_sectionformat();
-	}
-	else
-		error = RTF_OPEN_ERROR;
+	// Write RTF document header
+	write_header();
 
-	// Return error flag
-	return error;
+	// Write RTF document formatting properties
+	write_documentformat();
+
+	// Create first RTF document section with default formatting
+	write_sectionformat();
 }
 
 
-// Closes created RTF document
-int rtf_writer::close()
+// Closes RTF document
+void rtf_writer::close()
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	// Write RTF document end part
 	std::ostringstream rtfText;
 
 	rtfText << "\n\\par}";
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
 
-	// Close RTF document
-	if ( fclose(_File) )
-		error = RTF_CLOSE_ERROR;
-
-	// Return error flag
-	return error;
+	_oss << rtfText.str();
 }
 
 
 // Writes RTF document header
-bool rtf_writer::write_header()
+void rtf_writer::write_header()
 {
-	// Set error flag
-	bool result = true;
-
 	// Standard RTF document header
 	std::ostringstream rtfText;
 	rtfText 
-		<< "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl"
-		<< _FontTable
-		<< "}{\\colortbl"
-		<< _ColorTable
-		<< "}{\\*\\generator rtflib ver. 1.0;}"
-		<< "\n{\\info{\\author rtflib ver. 1.0}{\\company ETC Company LTD.}}"
-		;
+		<< "{"
+			<< "\\rtf1"
+			<< "\\ansi"
+			<< "\\ansicpg" << _Codepage
+			<< "\\deff0"
+			;
+	  
+	if (0!=_LanguageIDFe)
+	{
+		rtfText 
+			<< "\\deflang"   << _LanguageID
+			<< "\\deflangfe" << _LanguageIDFe
+			;
+	}
+
+	if (!_FontTable.empty())
+	{
+		rtfText 
+			<< "{"
+				<< "\\fonttbl" << _FontTable
+			<< "}"
+			;
+	}
+
+	if (!_ColorTable.empty())
+	{
+		rtfText 
+			<< "{"
+				<< "\\colortbl" << _ColorTable
+			<< "}"
+			;
+	}
+
+	rtfText 
+			<< "{" 
+				<< "\\*\\generator " << "rtf_writer;"
+			<< "}" << "\n"
+			<< "{"
+				<< "\\info"
+				<< "{\\author "  << "code1009"  << "}"
+				<< "{\\company " << "SEMI Company LTD." << "}"
+			<< "}"
+			;
 
 	// Writes standard RTF document header part
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-
-	// Return error flag
-	return result;
+	_oss << rtfText.str();
 }
 
-
-// Sets global RTF library params
-void rtf_writer::init()
+void rtf_writer::set_defaultfont()
 {
 	std::ostringstream rtfText;
 
 	// Set RTF document default font table
-	rtfText.str("");
 	rtfText 
 		<< "{\\f0\\froman\\fcharset0\\cpg1252 Times New Roman}"
 		<< "{\\f1\\fswiss\\fcharset0\\cpg1252 Arial}"
@@ -133,9 +191,15 @@ void rtf_writer::init()
 		<< "{\\f4\\fdecor\\fcharset0\\cpg1252 Old English}"
 		<< "{\\f5\\ftech\\fcharset0\\cpg1252 Symbol}"
 		<< "{\\f6\\fbidi\\fcharset0\\cpg1252 Miriam}"
-//		   "{\\f%d\\fnil\\fcharset0\\cpg1252 %s}", font_number, token );
 		;
+	
 	_FontTable = rtfText.str();
+	_FontCount = 7;
+}
+
+void rtf_writer::set_defaultcolor()
+{
+	std::ostringstream rtfText;
 
 	// Set RTF document default color table
 	rtfText.str("");
@@ -157,11 +221,74 @@ void rtf_writer::init()
 		<< "\\red128\\green128\\blue128;"
 		;
 	_ColorTable = rtfText.str();
-
-	// Set default formatting
-	set_defaultformat();
 }
 
+void rtf_writer::reset_fonttable()
+{
+	_FontTable.clear();
+	_FontCount = 0;
+}
+
+void rtf_writer::reset_colortable()
+{
+	_ColorTable.clear();
+}
+
+void rtf_writer::add_font(char* facename, int codepage, int charset)
+{
+//  {\f0\fnil\fcharset0\cpg1252 Times New Roman}
+//	{\f0\fnil\fcharset129 \'b8\'bc\'c0\'ba \'b0\'ed\'b5\'f1;}
+
+	std::ostringstream rtfText;
+
+	
+	rtfText
+		<< "{"
+		<< "\\f"   << _FontCount
+		<< "\\fnil"
+		;
+
+	if (0!=charset)
+	{
+		rtfText
+		<< "\\fcharset" << charset
+		;
+	}
+
+	if (0!=codepage)
+	{
+		rtfText
+		<< "\\cpg" << codepage
+		;
+	}
+
+	rtfText
+		<< " "
+		<< to_129(facename)
+		<< "}"
+		;
+
+	_FontTable += rtfText.str();
+
+
+
+	_FontCount++;
+}
+
+void rtf_writer::add_color(int r, int g, int b)
+{
+	std::ostringstream rtfText;
+
+	
+	rtfText
+		<< "\\red"   << r
+		<< "\\green" << g
+		<< "\\blue"  << b
+		<< ";"
+		;
+
+	_ColorTable += rtfText.str();
+}
 
 // Sets default RTF document formatting
 void rtf_writer::set_defaultformat()
@@ -251,75 +378,6 @@ void rtf_writer::set_defaultformat()
 	set_tablecellformat(&cf);
 }
 
-#if 0
-// Sets new RTF document font table
-void rtf_writer::set_fonttable( char* fonts )
-{
-	// Clear old font table
-	strcpy( _FontTable, "" );
-
-	// Set separator list
-	char separator[] = ";";
-
-	// Create new RTF document font table
-	int font_number = 0;
-	char font_table_entry[1024];
-	char* token = strtok( fonts, separator );
- 	while ( token != NULL )
-	{
-		// Format font table entry
-		sprintf( font_table_entry, "{\\f%d\\fnil\\fcharset0\\cpg1252 %s}", font_number, token );
-		strcat( _FontTable, font_table_entry );
-
-		// Get next font
-		token = strtok( NULL, separator );
-		font_number++;
-	}
-}
-
-
-// Sets new RTF document color table
-void rtf_writer::set_colortable(char* colors)
-{
-	// Clear old color table
-	strcpy( _ColorTable, "" );
-
-	// Set separator list
-	char separator[] = ";";
-
-	// Create new RTF document color table
-	int color_number = 0;
-	char color_table_entry[1024];
-	char* token = strtok( colors, separator );
- 	while ( token != NULL )
-	{
-		// Red
-		sprintf( color_table_entry, "\\red%s", token );
-		strcat( _ColorTable, color_table_entry );
-
-		// Green
-		token = strtok( NULL, separator );
-		if ( token != NULL )
-		{
-			sprintf( color_table_entry, "\\green%s", token );
-			strcat( _ColorTable, color_table_entry );
-		}
-
-		// Blue
-		token = strtok( NULL, separator );
-		if ( token != NULL )
-		{
-			sprintf( color_table_entry, "\\blue%s;", token );
-			strcat( _ColorTable, color_table_entry );
-		}
-
-		// Get next color
-		token = strtok( NULL, separator );
-		color_number++;
-	}
-}
-#endif
-
 
 // Sets RTF document formatting properties
 void rtf_writer::set_documentformat(RTF_DOCUMENT_FORMAT* df)
@@ -330,11 +388,8 @@ void rtf_writer::set_documentformat(RTF_DOCUMENT_FORMAT* df)
 
 
 // Writes RTF document formatting properties
-bool rtf_writer::write_documentformat()
+void rtf_writer::write_documentformat()
 {
-	// Set error flag
-	bool result = true;
-
 	// RTF document text
 	std::ostringstream rtfText;
 
@@ -357,10 +412,7 @@ bool rtf_writer::write_documentformat()
 		rtfText << "\\annotprot";
 
 	// Writes RTF document formatting properties
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-
-	// Return error flag
-	return result;
+	_oss << rtfText.str();
 }
 
 
@@ -373,11 +425,8 @@ void rtf_writer::set_sectionformat(RTF_SECTION_FORMAT* sf)
 
 
 // Writes RTF section formatting properties
-bool rtf_writer::write_sectionformat()
+void rtf_writer::write_sectionformat()
 {
-	// Set error flag
-	bool result = true;
-
 	// RTF document text
 	std::ostringstream rtfText;
 
@@ -458,28 +507,18 @@ bool rtf_writer::write_sectionformat()
 		;
 
 	// Writes RTF section formatting properties
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-
-	// Return error flag
-	return result;
+	_oss << rtfText.str();
 }
 
 
 // Starts new RTF section
-int rtf_writer::start_section()
+void rtf_writer::start_section()
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	// Set new section flag
 	_SecFormat.newSection = true;
 
 	// Starts new RTF section
-	if( !write_sectionformat() )
-		error = RTF_SECTIONFORMAT_ERROR;
-
-	// Return error flag
-	return error;
+	write_sectionformat();
 }
 
 
@@ -492,11 +531,8 @@ void rtf_writer::set_paragraphformat(RTF_PARAGRAPH_FORMAT* pf)
 
 
 // Writes RTF paragraph formatting properties
-bool rtf_writer::write_paragraphformat()
+void rtf_writer::write_paragraphformat()
 {
-	// Set error flag
-	bool result = true;
-
 	// RTF document text
 	std::ostringstream rtfText;
 
@@ -873,27 +909,21 @@ bool rtf_writer::write_paragraphformat()
 			<< "\\sl" << _ParFormat.lineSpacing    
 			<< font.str()
 			<< " "
-			<< _ParagraphText;
+			<< to_129(_ParagraphText);
 	}
 	else
 	{
-		rtfText << "\\tab " << _ParagraphText;
+		rtfText << "\\tab " << to_129(_ParagraphText);
 	}
 
 	// Writes RTF paragraph formatting properties
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-
-	// Return error flag
-	return result;
+	_oss << rtfText.str();
 }
 
 
 // Starts new RTF paragraph
-int rtf_writer::start_paragraph(char* text, bool newPar)
+void rtf_writer::start_paragraph(char* text, bool newPar)
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	// Copy paragraph text
 	_ParagraphText = text;
 //	_ParFormat.paragraphText = _ParagraphText.c_str();
@@ -902,11 +932,7 @@ int rtf_writer::start_paragraph(char* text, bool newPar)
 	_ParFormat.newParagraph = newPar;
 
 	// Starts new RTF paragraph
-	if( !write_paragraphformat() )
-		error = RTF_PARAGRAPHFORMAT_ERROR;
-
-	// Return error flag
-	return error;
+	write_paragraphformat();
 }
 
 
@@ -1085,11 +1111,8 @@ static void get_image_hmetafile_data (char* image_file_path, image_hmetafile_dat
 }
 
 // Loads image from file
-int rtf_writer::load_image(char* image_file_path, int width, int height)
+void rtf_writer::load_image(char* image_file_path, int width, int height)
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	// RTF document text
 	std::ostringstream rtfText;
 
@@ -1102,9 +1125,9 @@ int rtf_writer::load_image(char* image_file_path, int width, int height)
 	{
 		rtfText << "\n\\par\\pard " << "ERROR:" << image_file_path << "\\par";
 
-		fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
+		_oss << rtfText.str();
 
-		return 0;
+		return;
 	}
 
 
@@ -1137,11 +1160,7 @@ int rtf_writer::load_image(char* image_file_path, int width, int height)
 		<< "}"
 		;
 
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-
-
-	// Return error flag
-	return 0;
+	_oss << rtfText.str();
 }
 
 
@@ -1190,11 +1209,8 @@ std::string rtf_writer::binary_to_hex(unsigned char* binary, int size)
 
 
 // Starts new RTF table row
-int rtf_writer::start_tablerow()
+void rtf_writer::start_tablerow()
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	std::ostringstream rtfText;
 
 
@@ -1234,19 +1250,13 @@ int rtf_writer::start_tablerow()
 		<< "\\trpaddt"   << _RowFormat.marginRight
 		<< "\\trpaddft3";
 
-	fwrite(rtfText.str().c_str(), 1, rtfText.str().size(), _File);
-
-	// Return error flag
-	return error;
+	_oss << rtfText.str();
 }
 
 
 // Ends RTF table row
-int rtf_writer::end_tablerow()
+void rtf_writer::end_tablerow()
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	std::ostringstream rtfText;
 
 
@@ -1257,19 +1267,13 @@ int rtf_writer::end_tablerow()
 		<< "\\row"
 		<< "\\pard";
 
-	fwrite(rtfText.str().c_str(), 1, rtfText.str().size(), _File);
-
-	// Return error flag
-	return error;
+	_oss << rtfText.str();
 }
 
 
 // Starts new RTF table cell
-int rtf_writer::start_tablecell(int rightMargin)
+void rtf_writer::start_tablecell(int rightMargin)
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	std::ostringstream rtfText;
 
 	// Format table cell text aligment
@@ -1390,28 +1394,18 @@ int rtf_writer::start_tablecell(int rightMargin)
 		<< shading.str()
 		<< "\\cellx" << rightMargin;
 
-	fwrite(rtfText.str().c_str(), 1, rtfText.str().size(), _File);
-
-	// Return error flag
-	return error;
+	_oss << rtfText.str();
 }
 
 
 // Ends RTF table cell
-int rtf_writer::end_tablecell()
+void rtf_writer::end_tablecell()
 {
-	// Set error flag
-	int error = RTF_SUCCESS;
-
 	// Writes RTF table data
 	std::ostringstream rtfText;
 
 	rtfText << "\n\\cell ";
-	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
-
-
-	// Return error flag
-	return error;
+	_oss << rtfText.str();
 }
 
 
