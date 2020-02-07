@@ -35,7 +35,7 @@ int rtf_writer::open( char* filename, char* fonts, char* colors )
 
 	// Initialize global params
 	init();
-
+#if 0
 	// Set RTF document font table
 	if ( fonts != NULL )
 	{
@@ -49,7 +49,7 @@ int rtf_writer::open( char* filename, char* fonts, char* colors )
 		if ( strcmp( colors, "" ) != 0 )
 			set_colortable(colors);
 	}
-
+#endif
 	// Create RTF document
 	_File = fopen( filename, "w" );
 
@@ -105,38 +105,16 @@ int rtf_writer::close()
 // Writes RTF document header
 bool rtf_writer::write_header()
 {
-#if 0
-	// Set error flag
-	bool result = true;
-
-	// Standard RTF document header
-	char rtfText[1024];
-	strcpy( rtfText, "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl" );
-	strcat( rtfText, _FontTable );
-	strcat( rtfText, "}{\\colortbl" );
-	strcat( rtfText, _ColorTable );
-	strcat( rtfText, "}{\\*\\generator rtflib ver. 1.0;}" );
-	strcat( rtfText, "\n{\\info{\\author rtflib ver. 1.0}{\\company ETC Company LTD.}}" );
-
-	// Writes standard RTF document header part
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		result = false;
-
-	// Return error flag
-	return result;
-#endif
 	// Set error flag
 	bool result = true;
 
 	// Standard RTF document header
 	std::ostringstream rtfText;
-
-
 	rtfText 
-		<< "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl";
-		<< _FontTable.str()
+		<< "{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl"
+		<< _FontTable
 		<< "}{\\colortbl"
-		<< _ColorTable.str()
+		<< _ColorTable
 		<< "}{\\*\\generator rtflib ver. 1.0;}"
 		<< "\n{\\info{\\author rtflib ver. 1.0}{\\company ETC Company LTD.}}"
 		;
@@ -152,9 +130,11 @@ bool rtf_writer::write_header()
 // Sets global RTF library params
 void rtf_writer::init()
 {
+	std::ostringstream rtfText;
+
 	// Set RTF document default font table
-	_FontTable.str("");
-	_FontTable 
+	rtfText.str("");
+	rtfText 
 		<< "{\\f0\\froman\\fcharset0\\cpg1252 Times New Roman}"
 		<< "{\\f1\\fswiss\\fcharset0\\cpg1252 Arial}"
 		<< "{\\f2\\fmodern\\fcharset0\\cpg1252 Courier New}"
@@ -162,11 +142,13 @@ void rtf_writer::init()
 		<< "{\\f4\\fdecor\\fcharset0\\cpg1252 Old English}"
 		<< "{\\f5\\ftech\\fcharset0\\cpg1252 Symbol}"
 		<< "{\\f6\\fbidi\\fcharset0\\cpg1252 Miriam}"
+//		   "{\\f%d\\fnil\\fcharset0\\cpg1252 %s}", font_number, token );
 		;
+	_FontTable = rtfText.str();
 
 	// Set RTF document default color table
-	_ColorTable.str("");
-	_ColorTable
+	rtfText.str("");
+	rtfText
 		<< "\\red0\\green0\\blue0;"
 		<< "\\red255\\green0\\blue0;"
 		<< "\\red0\\green255\\blue0;"
@@ -183,6 +165,7 @@ void rtf_writer::init()
 		<< "\\red0\\green128\\blue128;"
 		<< "\\red128\\green128\\blue128;"
 		;
+	_ColorTable = rtfText.str();
 
 	// Set default formatting
 	set_defaultformat();
@@ -203,40 +186,40 @@ void rtf_writer::set_defaultformat()
 	// Set default RTF paragraph formatting properties
 	RTF_PARAGRAPH_FORMAT pf = {RTF_PARAGRAPHBREAK_NONE, false, true, RTF_PARAGRAPHALIGN_LEFT, 0, 0, 0, 0, 0, 0, "", false, false, false, false, false, false};
 	pf.BORDERS.borderColor = 0;
-	pf.BORDERS.borderKind = RTF_PARAGRAPHBORDERKIND_NONE;
+	pf.BORDERS.borderKind  = RTF_PARAGRAPHBORDERKIND_NONE;
 	pf.BORDERS.borderSpace = 0;
-	pf.BORDERS.borderType = RTF_PARAGRAPHBORDERTYPE_STHICK;
+	pf.BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
 	pf.BORDERS.borderWidth = 0;
-	pf.CHARACTER.animatedCharacter = false;
-	pf.CHARACTER.backgroundColor = 0;
-	pf.CHARACTER.boldCharacter = false;
-	pf.CHARACTER.capitalCharacter = false;
+	pf.CHARACTER.animatedCharacter     = false;
+	pf.CHARACTER.backgroundColor       = 0;
+	pf.CHARACTER.boldCharacter         = false;
+	pf.CHARACTER.capitalCharacter      = false;
 	pf.CHARACTER.doublestrikeCharacter = false;
-	pf.CHARACTER.embossCharacter = false;
-	pf.CHARACTER.engraveCharacter = false;
-	pf.CHARACTER.expandCharacter = 0;
-	pf.CHARACTER.fontNumber = 0;
-	pf.CHARACTER.fontSize = 24;
-	pf.CHARACTER.foregroundColor = 0;
-	pf.CHARACTER.italicCharacter = false;
-	pf.CHARACTER.kerningCharacter = 0;
-	pf.CHARACTER.outlineCharacter = false;
-	pf.CHARACTER.scaleCharacter = 100;
-	pf.CHARACTER.shadowCharacter = false;
+	pf.CHARACTER.embossCharacter       = false;
+	pf.CHARACTER.engraveCharacter      = false;
+	pf.CHARACTER.expandCharacter       = 0;
+	pf.CHARACTER.fontNumber            = 0;
+	pf.CHARACTER.fontSize              = 24;
+	pf.CHARACTER.foregroundColor       = 0;
+	pf.CHARACTER.italicCharacter       = false;
+	pf.CHARACTER.kerningCharacter      = 0;
+	pf.CHARACTER.outlineCharacter      = false;
+	pf.CHARACTER.scaleCharacter        = 100;
+	pf.CHARACTER.shadowCharacter       = false;
 	pf.CHARACTER.smallcapitalCharacter = false;
-	pf.CHARACTER.strikeCharacter = false;
-	pf.CHARACTER.subscriptCharacter = false;
-	pf.CHARACTER.superscriptCharacter = false;
-	pf.CHARACTER.underlineCharacter = 0;
-	pf.NUMS.numsChar = char(0x95);
+	pf.CHARACTER.strikeCharacter       = false;
+	pf.CHARACTER.subscriptCharacter    = false;
+	pf.CHARACTER.superscriptCharacter  = false;
+	pf.CHARACTER.underlineCharacter    = 0;
+	pf.NUMS.numsChar  = char(0x95);
 	pf.NUMS.numsLevel = 11;
 	pf.NUMS.numsSpace = 360;
-	pf.SHADING.shadingBkColor = 0;
+	pf.SHADING.shadingBkColor   = 0;
 	pf.SHADING.shadingFillColor = 0;
 	pf.SHADING.shadingIntensity = 0;
-	pf.SHADING.shadingType = RTF_PARAGRAPHSHADINGTYPE_FILL;
-	pf.TABS.tabKind = RTF_PARAGRAPHTABKIND_NONE;
-	pf.TABS.tabLead = RTF_PARAGRAPHTABLEAD_NONE;
+	pf.SHADING.shadingType      = RTF_PARAGRAPHSHADINGTYPE_FILL;
+	pf.TABS.tabKind     = RTF_PARAGRAPHTABKIND_NONE;
+	pf.TABS.tabLead     = RTF_PARAGRAPHTABLEAD_NONE;
 	pf.TABS.tabPosition = 0;
 	set_paragraphformat(&pf);
 
@@ -246,38 +229,38 @@ void rtf_writer::set_defaultformat()
 
 	// Set default RTF table cell formatting properties
 	RTF_TABLECELL_FORMAT cf = {RTF_CELLTEXTALIGN_CENTER, 0, 0, 0, 0, RTF_CELLTEXTDIRECTION_LRTB, false};
-	cf.SHADING.shadingBkColor = 0;
+	cf.SHADING.shadingBkColor   = 0;
 	cf.SHADING.shadingFillColor = 0;
 	cf.SHADING.shadingIntensity = 0;
-	cf.SHADING.shadingType = RTF_PARAGRAPHSHADINGTYPE_FILL;
-	cf.borderBottom.border = false;
+	cf.SHADING.shadingType      = RTF_PARAGRAPHSHADINGTYPE_FILL;
+	cf.borderBottom.border              = false;
 	cf.borderBottom.BORDERS.borderColor = 0;
-	cf.borderBottom.BORDERS.borderKind = RTF_PARAGRAPHBORDERKIND_NONE;
+	cf.borderBottom.BORDERS.borderKind  = RTF_PARAGRAPHBORDERKIND_NONE;
 	cf.borderBottom.BORDERS.borderSpace = 0;
-	cf.borderBottom.BORDERS.borderType = RTF_PARAGRAPHBORDERTYPE_STHICK;
+	cf.borderBottom.BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
 	cf.borderBottom.BORDERS.borderWidth = 5;
-	cf.borderLeft.border = false;
-	cf.borderLeft.BORDERS.borderColor = 0;
-	cf.borderLeft.BORDERS.borderKind = RTF_PARAGRAPHBORDERKIND_NONE;
-	cf.borderLeft.BORDERS.borderSpace = 0;
-	cf.borderLeft.BORDERS.borderType = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf.borderLeft.BORDERS.borderWidth = 5;
-	cf.borderRight.border = false;
-	cf.borderRight.BORDERS.borderColor = 0;
-	cf.borderRight.BORDERS.borderKind = RTF_PARAGRAPHBORDERKIND_NONE;
-	cf.borderRight.BORDERS.borderSpace = 0;
-	cf.borderRight.BORDERS.borderType = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf.borderRight.BORDERS.borderWidth = 5;
-	cf.borderTop.border = false;
-	cf.borderTop.BORDERS.borderColor = 0;
-	cf.borderTop.BORDERS.borderKind = RTF_PARAGRAPHBORDERKIND_NONE;
-	cf.borderTop.BORDERS.borderSpace = 0;
-	cf.borderTop.BORDERS.borderType = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf.borderTop.BORDERS.borderWidth = 5;
+	cf.borderLeft  .border              = false;
+	cf.borderLeft  .BORDERS.borderColor = 0;
+	cf.borderLeft  .BORDERS.borderKind  = RTF_PARAGRAPHBORDERKIND_NONE;
+	cf.borderLeft  .BORDERS.borderSpace = 0;
+	cf.borderLeft  .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+	cf.borderLeft  .BORDERS.borderWidth = 5;
+	cf.borderRight .border              = false;
+	cf.borderRight .BORDERS.borderColor = 0;
+	cf.borderRight .BORDERS.borderKind  = RTF_PARAGRAPHBORDERKIND_NONE;
+	cf.borderRight .BORDERS.borderSpace = 0;
+	cf.borderRight .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+	cf.borderRight .BORDERS.borderWidth = 5;
+	cf.borderTop   .border              = false;
+	cf.borderTop   .BORDERS.borderColor = 0;
+	cf.borderTop   .BORDERS.borderKind  = RTF_PARAGRAPHBORDERKIND_NONE;
+	cf.borderTop   .BORDERS.borderSpace = 0;
+	cf.borderTop   .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+	cf.borderTop   .BORDERS.borderWidth = 5;
 	set_tablecellformat(&cf);
 }
 
-
+#if 0
 // Sets new RTF document font table
 void rtf_writer::set_fonttable( char* fonts )
 {
@@ -344,6 +327,7 @@ void rtf_writer::set_colortable(char* colors)
 		color_number++;
 	}
 }
+#endif
 
 
 // Sets RTF document formatting properties
@@ -361,21 +345,28 @@ bool rtf_writer::write_documentformat()
 	bool result = true;
 
 	// RTF document text
-	char rtfText[1024];
-	strcpy( rtfText, "" );
+	std::ostringstream rtfText;
 
-	sprintf( rtfText, "\\viewkind%d\\viewscale%d\\paperw%d\\paperh%d\\margl%d\\margr%d\\margt%d\\margb%d\\gutter%d", 
-		_DocFormat.viewKind, _DocFormat.viewScale, _DocFormat.paperWidth, _DocFormat.paperHeight,
-		_DocFormat.marginLeft, _DocFormat.marginRight, _DocFormat.marginTop, _DocFormat.marginBottom, _DocFormat.gutterWidth );
+	rtfText
+		<< "\\viewkind"  << _DocFormat.viewKind
+		<< "\\viewscale" << _DocFormat.viewScale
+		<< "\\paperw"    << _DocFormat.paperWidth
+		<< "\\paperh"    << _DocFormat.paperHeight
+		<< "\\margl"     << _DocFormat.marginLeft
+		<< "\\margr"     << _DocFormat.marginRight
+		<< "\\margt"     << _DocFormat.marginTop
+		<< "\\margb"     << _DocFormat.marginBottom
+		<< "\\gutter"    << _DocFormat.gutterWidth
+		;
 
 	if ( _DocFormat.facingPages )
-		strcat( rtfText, "\\facingp" );
+		rtfText << "\\facingp";
+
 	if ( _DocFormat.readOnly )
-		strcat( rtfText, "\\annotprot" );
+		rtfText << "\\annotprot";
 
 	// Writes RTF document formatting properties
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		result = false;
+	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
 
 	// Return error flag
 	return result;
@@ -397,69 +388,86 @@ bool rtf_writer::write_sectionformat()
 	bool result = true;
 
 	// RTF document text
-	char rtfText[1024];
-	strcpy( rtfText, "" );
+	std::ostringstream rtfText;
 
 	// Format new section
-	char text[1024]="", pgn[100]="";
-	if ( _SecFormat.newSection )
-		strcat( text, "\\sect" );
-	if ( _SecFormat.defaultSection )
-		strcat( text, "\\sectd" );
+	std::ostringstream text;
+	std::ostringstream pgn;
+
+	std::ostringstream sbr;
+	std::ostringstream cols;
+
+
+	if ( _SecFormat.newSection     ) text << "\\sect";
+	if ( _SecFormat.defaultSection ) text << "\\sectd";
 	if ( _SecFormat.showPageNumber )
 	{
-		sprintf( pgn, "\\pgnx%d\\pgny%d", _SecFormat.pageNumberOffsetX, _SecFormat.pageNumberOffsetY );
-		strcat( text, pgn );
+		pgn 
+			<< "\\pgnx" << _SecFormat.pageNumberOffsetX
+			<< "\\pgny" << _SecFormat.pageNumberOffsetY
+			;
+
+		text << pgn.str();
 	}
 	
 	// Format section break
-	char sbr[100] = "";
 	switch (_SecFormat.sectionBreak)
 	{
-		// Continuous break
-		case RTF_SECTIONBREAK_CONTINUOUS:
-			strcat( sbr, "\\sbknone" );
-			break;
+	// Continuous break
+	case RTF_SECTIONBREAK_CONTINUOUS:
+		sbr << "\\sbknone";
+		break;
 
-		// Column break
-		case RTF_SECTIONBREAK_COLUMN:
-			strcat( sbr, "\\sbkcol" );
-			break;
+	// Column break
+	case RTF_SECTIONBREAK_COLUMN:
+		sbr << "\\sbkcol";
+		break;
 
-		// Page break
-		case RTF_SECTIONBREAK_PAGE:
-			strcat( sbr, "\\sbkpage" );
-			break;
+	// Page break
+	case RTF_SECTIONBREAK_PAGE:
+		sbr << "\\sbkpage";
+		break;
 
-		// Even-page break
-		case RTF_SECTIONBREAK_EVENPAGE:
-			strcat( sbr, "\\sbkeven" );
-			break;
+	// Even-page break
+	case RTF_SECTIONBREAK_EVENPAGE:
+		sbr << "\\sbkeven";
+		break;
 
-		// Odd-page break
-		case RTF_SECTIONBREAK_ODDPAGE:
-			strcat( sbr, "\\sbkodd" );
-			break;
+	// Odd-page break
+	case RTF_SECTIONBREAK_ODDPAGE:
+		sbr << "\\sbkodd";
+		break;
 	}
 
 	// Format section columns
-	char cols[100] = "";
 	if ( _SecFormat.cols == true )
 	{
 		// Format columns
-		sprintf( cols, "\\cols%d\\colsx%d", _SecFormat.colsNumber, _SecFormat.colsDistance );
+		cols 
+			<< "\\cols"  << _SecFormat.colsNumber
+			<< "\\colsx" << _SecFormat.colsDistance 
+			;
+
 
 		if ( _SecFormat.colsLineBetween )
-			strcat( cols, "\\linebetcol" );
+			cols << "\\linebetcol";
 	}
 
-	sprintf( rtfText, "\n%s%s%s\\pgwsxn%d\\pghsxn%d\\marglsxn%d\\margrsxn%d\\margtsxn%d\\margbsxn%d\\guttersxn%d\\headery%d\\footery%d", 
-		text, sbr, cols, _SecFormat.pageWidth, _SecFormat.pageHeight, _SecFormat.pageMarginLeft, _SecFormat.pageMarginRight,
-		_SecFormat.pageMarginTop, _SecFormat.pageMarginBottom, _SecFormat.pageGutterWidth, _SecFormat.pageHeaderOffset, _SecFormat.pageFooterOffset );
+	rtfText
+		<< "\n" << text.str() << sbr.str() << cols.str()
+		<< "\\pgwsxn"   << _SecFormat.pageWidth       
+		<< "\\pghsxn"   << _SecFormat.pageHeight      
+		<< "\\marglsxn" << _SecFormat.pageMarginLeft  
+		<< "\\margrsxn" << _SecFormat.pageMarginRight 
+		<< "\\margtsxn" << _SecFormat.pageMarginTop   
+		<< "\\margbsxn" << _SecFormat.pageMarginBottom
+		<< "\\guttersxn"<< _SecFormat.pageGutterWidth 
+		<< "\\headery"  << _SecFormat.pageHeaderOffset
+		<< "\\footery"  << _SecFormat.pageFooterOffset
+		;
 
 	// Writes RTF section formatting properties
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		result = false;
+	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
 
 	// Return error flag
 	return result;
@@ -499,64 +507,63 @@ bool rtf_writer::write_paragraphformat()
 	bool result = true;
 
 	// RTF document text
-	char rtfText[4096];
-	strcpy( rtfText, "" );
+	std::ostringstream rtfText;
 
-	// Format new paragraph
-	char text[1024] = "";
+	// Format new section
+	std::ostringstream text;
 	if ( _ParFormat.newParagraph )
-		strcat( text, "\\par" );
+		text << "\\par";
 	if ( _ParFormat.defaultParagraph )
-		strcat( text, "\\pard" );
+		text << "\\pard";
 	if ( _ParFormat.tableText == false )
-		strcat( text, "\\plain" );
+		text << "\\plain";
 	else
-		strcat( text, "\\intbl" );
+		text << "\\intbl";
 	
 	switch (_ParFormat.paragraphBreak)
 	{
-		// No break
-		case RTF_PARAGRAPHBREAK_NONE:
-			break;
+	// No break
+	case RTF_PARAGRAPHBREAK_NONE:
+		break;
 
-		// Page break;
-		case RTF_PARAGRAPHBREAK_PAGE:
-			strcat( text, "\\page" );
-			break;
+	// Page break;
+	case RTF_PARAGRAPHBREAK_PAGE:
+		text << "\\page";
+		break;
 
-		// Column break;
-		case RTF_PARAGRAPHBREAK_COLUMN:
-			strcat( text, "\\column" );
-			break;
+	// Column break;
+	case RTF_PARAGRAPHBREAK_COLUMN:
+		text << "\\column" ;
+		break;
 
-		// Line break;
-		case RTF_PARAGRAPHBREAK_LINE:
-			strcat( text, "\\line" );
-			break;
+	// Line break;
+	case RTF_PARAGRAPHBREAK_LINE:
+		text << "\\line";
+		break;
 	}
 
 	// Format aligment
 	switch (_ParFormat.paragraphAligment)
 	{
-		// Left aligned paragraph
-		case RTF_PARAGRAPHALIGN_LEFT:
-			strcat( text, "\\ql" );
-			break;
+	// Left aligned paragraph
+	case RTF_PARAGRAPHALIGN_LEFT:
+		text << "\\ql";
+		break;
 
-		// Center aligned paragraph
-		case RTF_PARAGRAPHALIGN_CENTER:
-			strcat( text, "\\qc" );
-			break;
+	// Center aligned paragraph
+	case RTF_PARAGRAPHALIGN_CENTER:
+		text << "\\qc";
+		break;
 
-		// Right aligned paragraph
-		case RTF_PARAGRAPHALIGN_RIGHT:
-			strcat( text, "\\qr" );
-			break;
+	// Right aligned paragraph
+	case RTF_PARAGRAPHALIGN_RIGHT:
+		text << "\\qr";
+		break;
 
-		// Justified aligned paragraph
-		case RTF_PARAGRAPHALIGN_JUSTIFY:
-			strcat( text, "\\qj" );
-			break;
+	// Justified aligned paragraph
+	case RTF_PARAGRAPHALIGN_JUSTIFY:
+		text << "\\qj";
+		break;
 	}
 
 	// Format tabs
@@ -565,301 +572,325 @@ bool rtf_writer::write_paragraphformat()
 		// Set tab kind
 		switch ( _ParFormat.TABS.tabKind )
 		{
-			// No tab
-			case RTF_PARAGRAPHTABKIND_NONE:
-				break;
+		// No tab
+		case RTF_PARAGRAPHTABKIND_NONE:
+			break;
 
-			// Centered tab
-			case RTF_PARAGRAPHTABKIND_CENTER:
-				strcat( text, "\\tqc" );
-				break;
+		// Centered tab
+		case RTF_PARAGRAPHTABKIND_CENTER:
+			text << "\\tqc";
+			break;
 
-			// Flush-right tab
-			case RTF_PARAGRAPHTABKIND_RIGHT:
-				strcat( text, "\\tqr" );
-				break;
+		// Flush-right tab
+		case RTF_PARAGRAPHTABKIND_RIGHT:
+			text << "\\tqr";
+			break;
 
-			// Decimal tab
-			case RTF_PARAGRAPHTABKIND_DECIMAL:
-				strcat( text, "\\tqdec" );
-				break;
+		// Decimal tab
+		case RTF_PARAGRAPHTABKIND_DECIMAL:
+			text << "\\tqdec";
+			break;
 		}
 
 		// Set tab leader
 		switch ( _ParFormat.TABS.tabLead )
 		{
-			// No lead
-			case RTF_PARAGRAPHTABLEAD_NONE:
-				break;
+		// No lead
+		case RTF_PARAGRAPHTABLEAD_NONE:
+			break;
 
-			// Leader dots
-			case RTF_PARAGRAPHTABLEAD_DOT:
-				strcat( text, "\\tldot" );
-				break;
+		// Leader dots
+		case RTF_PARAGRAPHTABLEAD_DOT:
+			text << "\\tldot";
+			break;
 
-			// Leader middle dots
-			case RTF_PARAGRAPHTABLEAD_MDOT:
-				strcat( text, "\\tlmdot" );
-				break;
+		// Leader middle dots
+		case RTF_PARAGRAPHTABLEAD_MDOT:
+			text << "\\tlmdot";
+			break;
 
-			// Leader hyphens
-			case RTF_PARAGRAPHTABLEAD_HYPH:
-				strcat( text, "\\tlhyph" );
-				break;
+		// Leader hyphens
+		case RTF_PARAGRAPHTABLEAD_HYPH:
+			text << "\\tlhyph";
+			break;
 
-			// Leader underline
-			case RTF_PARAGRAPHTABLEAD_UNDERLINE:
-				strcat( text, "\\tlul" );
-				break;
+		// Leader underline
+		case RTF_PARAGRAPHTABLEAD_UNDERLINE:
+			text << "\\tlul";
+			break;
 
-			// Leader thick line
-			case RTF_PARAGRAPHTABLEAD_THICKLINE:
-				strcat( text, "\\tlth" );
-				break;
+		// Leader thick line
+		case RTF_PARAGRAPHTABLEAD_THICKLINE:
+			text << "\\tlth";
+			break;
 
-			// Leader equal sign
-			case RTF_PARAGRAPHTABLEAD_EQUAL:
-				strcat( text, "\\tleq" );
-				break;
+		// Leader equal sign
+		case RTF_PARAGRAPHTABLEAD_EQUAL:
+			text << "\\tleq";
+			break;
 		}
 
 		// Set tab position
-		char tb[10];
-		sprintf( tb, "\\tx%d", _ParFormat.TABS.tabPosition );
-		strcat( text, tb );
+		text << "\\tx" << _ParFormat.TABS.tabPosition;
 	}
 
 	// Format bullets and numbering
 	if ( _ParFormat.paragraphNums == true )
 	{
-		char nums[1024];
-		sprintf( nums, "{\\*\\pn\\pnlvl%d\\pnsp%d\\pntxtb %c}", _ParFormat.NUMS.numsLevel, _ParFormat.NUMS.numsSpace, _ParFormat.NUMS.numsChar );
-		strcat( text, nums );
+		text 
+			<< "{\\*\\pn"
+			<< "\\pnlvl"   << _ParFormat.NUMS.numsLevel
+			<< "\\pnsp"    << _ParFormat.NUMS.numsSpace
+			<< "\\pntxtb " << _ParFormat.NUMS.numsChar 
+			<< "}"
+			;
 	}
 
 	// Format paragraph borders
 	if ( _ParFormat.paragraphBorders == true )
 	{
-		char border[1024] = "";
+		std::ostringstream border;
 
 		// Format paragraph border kind
 		switch (_ParFormat.BORDERS.borderKind)
 		{
-			// No border
-			case RTF_PARAGRAPHBORDERKIND_NONE:
-				break;
+		// No border
+		case RTF_PARAGRAPHBORDERKIND_NONE:
+			break;
 
-			// Border top
-			case RTF_PARAGRAPHBORDERKIND_TOP:
-				strcat( border, "\\brdrt" );
-				break;
+		// Border top
+		case RTF_PARAGRAPHBORDERKIND_TOP:
+			border << "\\brdrt";
+			break;
 
-			// Border bottom
-			case RTF_PARAGRAPHBORDERKIND_BOTTOM:
-				strcat( border, "\\brdrb" );
-				break;
+		// Border bottom
+		case RTF_PARAGRAPHBORDERKIND_BOTTOM:
+			border << "\\brdrb";
+			break;
 
-			// Border left
-			case RTF_PARAGRAPHBORDERKIND_LEFT:
-				strcat( border, "\\brdrl" );
-				break;
+		// Border left
+		case RTF_PARAGRAPHBORDERKIND_LEFT:
+			border << "\\brdrl";
+			break;
 
-			// Border right
-			case RTF_PARAGRAPHBORDERKIND_RIGHT:
-				strcat( border, "\\brdrr" );
-				break;
+		// Border right
+		case RTF_PARAGRAPHBORDERKIND_RIGHT:
+			border << "\\brdrr";
+			break;
 
-			// Border box
-			case RTF_PARAGRAPHBORDERKIND_BOX:
-				strcat( border, "\\box" );
-				break;
+		// Border box
+		case RTF_PARAGRAPHBORDERKIND_BOX:
+			border << "\\box";
+			break;
 		}
 
 		// Format paragraph border type
-		char *br = get_bordername(_ParFormat.BORDERS.borderType);
-		strcat( border, br );
+		border << get_bordername(_ParFormat.BORDERS.borderType);
 
 		// Set paragraph border width
-		char brd[100];
-		sprintf( brd, "\\brdrw%d\\brsp%d", _ParFormat.BORDERS.borderWidth, _ParFormat.BORDERS.borderSpace );
-		strcat( border, brd );
-		strcat( text, border );
+		border
+			<< "\\brdrw" << _ParFormat.BORDERS.borderWidth
+			<< "\\brsp"  << _ParFormat.BORDERS.borderSpace
+			;
 
 		// Set paragraph border color
-		char brdcol[100];
-		sprintf( brdcol, "\\brdrcf%d", _ParFormat.BORDERS.borderColor );
-		strcat( text, brdcol );
+		border
+			<< "\\brdrcf" << _ParFormat.BORDERS.borderColor
+			;
+
+
+		text << border.str();
 	}
 
 	// Format paragraph shading
 	if ( _ParFormat.paragraphShading == true )
 	{
-		char shading[100];
-		sprintf( shading, "\\shading%d", _ParFormat.SHADING.shadingIntensity );
+		// CHECK:
+		//std::ostringstream shading;
+
+		//shading << "\\shading" << _ParFormat.SHADING.shadingIntensity;
+
+		// or 
 
 		// Format paragraph shading
-		char* sh = get_shadingname( _ParFormat.SHADING.shadingType, false );
-		strcat( text, sh );
+		text << get_shadingname( _ParFormat.SHADING.shadingType, false );
 
 		// Set paragraph shading color
-		char shcol[100];
-		sprintf( shcol, "\\cfpat%d\\cbpat%d", _ParFormat.SHADING.shadingFillColor, _ParFormat.SHADING.shadingBkColor );
-		strcat( text, shcol );
+		text 
+			<< "\\cfpat" << _ParFormat.SHADING.shadingFillColor
+			<< "\\cbpat" << _ParFormat.SHADING.shadingBkColor
+			;
 	}
 
 	// Format paragraph font
-	char font[1024] = "";
-	sprintf( font, "\\animtext%d\\expndtw%d\\kerning%d\\charscalex%d\\f%d\\fs%d\\cf%d", _ParFormat.CHARACTER.animatedCharacter, 
-		_ParFormat.CHARACTER.expandCharacter, _ParFormat.CHARACTER.kerningCharacter, _ParFormat.CHARACTER.scaleCharacter, 
-		_ParFormat.CHARACTER.fontNumber, _ParFormat.CHARACTER.fontSize, _ParFormat.CHARACTER.foregroundColor );
+	std::ostringstream font;
+	font
+		<< "\\animtext"  << _ParFormat.CHARACTER.animatedCharacter
+		<< "\\expndtw"   << _ParFormat.CHARACTER.expandCharacter  
+		<< "\\kerning"   << _ParFormat.CHARACTER.kerningCharacter 
+		<< "\\charscalex"<< _ParFormat.CHARACTER.scaleCharacter   
+		<< "\\f"         << _ParFormat.CHARACTER.fontNumber       
+		<< "\\fs"        << _ParFormat.CHARACTER.fontSize         
+		<< "\\cf"        << _ParFormat.CHARACTER.foregroundColor  
+		;
+
 	if ( _ParFormat.CHARACTER.boldCharacter )
-		strcat( font, "\\b" );
+		font << "\\b";
 	else
-		strcat( font, "\\b0" );
+		font << "\\b0";
 	if ( _ParFormat.CHARACTER.capitalCharacter )
-		strcat( font, "\\caps" );
+		font << "\\caps";
 	else
-		strcat( font, "\\caps0" );
+		font << "\\caps0";
 	if ( _ParFormat.CHARACTER.doublestrikeCharacter )
-		strcat( font, "\\striked1" );
+		font << "\\striked1";
 	else
-		strcat( font, "\\striked0" );
+		font << "\\striked0";
 	if ( _ParFormat.CHARACTER.embossCharacter )
-		strcat( font, "\\embo" );
+		font << "\\embo";
 	if ( _ParFormat.CHARACTER.engraveCharacter )
-		strcat( font, "\\impr" );
+		font << "\\impr";
 	if ( _ParFormat.CHARACTER.italicCharacter )
-		strcat( font, "\\i" );
+		font << "\\i";
 	else
-		strcat( font, "\\i0" );
+		font << "\\i0";
 	if ( _ParFormat.CHARACTER.outlineCharacter )
-		strcat( font, "\\outl" );
+		font << "\\outl";
 	else
-		strcat( font, "\\outl0" );
+		font << "\\outl0";
 	if ( _ParFormat.CHARACTER.shadowCharacter )
-		strcat( font, "\\shad" );
+		font << "\\shad";
 	else
-		strcat( font, "\\shad0" );
+		font << "\\shad0";
 	if ( _ParFormat.CHARACTER.smallcapitalCharacter )
-		strcat( font, "\\scaps" );
+		font << "\\scaps";
 	else
-		strcat( font, "\\scaps0" );
+		font << "\\scaps0";
 	if ( _ParFormat.CHARACTER.strikeCharacter )
-		strcat( font, "\\strike" );
+		font << "\\strike";
 	else
-		strcat( font, "\\strike0" );
+		font << "\\strike0";
 	if ( _ParFormat.CHARACTER.subscriptCharacter )
-		strcat( font, "\\sub" );
+		font << "\\sub";
 	if ( _ParFormat.CHARACTER.superscriptCharacter )
-		strcat( font, "\\super" );
+		font << "\\super";
 	
 	switch (_ParFormat.CHARACTER.underlineCharacter)
 	{
-		// None underline
-		case 0:
-			strcat( font, "\\ulnone" );
-			break;
+	// None underline
+	case 0:
+		font << "\\ulnone";
+		break;
 
-		// Continuous underline
-		case 1:
-			strcat( font, "\\ul" );
-			break;
+	// Continuous underline
+	case 1:
+		font << "\\ul";
+		break;
 
-		// Dotted underline
-		case 2:
-			strcat( font, "\\uld" );
-			break;
+	// Dotted underline
+	case 2:
+		font << "\\uld";
+		break;
 
-		// Dashed underline
-		case 3:
-			strcat( font, "\\uldash" );
-			break;
+	// Dashed underline
+	case 3:
+		font << "\\uldash";
+		break;
 
-		// Dash-dotted underline
-		case 4:
-			strcat( font, "\\uldashd" );
-			break;
+	// Dash-dotted underline
+	case 4:
+		font << "\\uldashd";
+		break;
 
-		// Dash-dot-dotted underline
-		case 5:
-			strcat( font, "\\uldashdd" );
-			break;
+	// Dash-dot-dotted underline
+	case 5:
+		font << "\\uldashdd";
+		break;
 
-		// Double underline
-		case 6:
-			strcat( font, "\\uldb" );
-			break;
+	// Double underline
+	case 6:
+		font << "\\uldb";
+		break;
 
-		// Heavy wave underline
-		case 7:
-			strcat( font, "\\ulhwave" );
-			break;
+	// Heavy wave underline
+	case 7:
+		font << "\\ulhwave";
+		break;
 
-		// Long dashed underline
-		case 8:
-			strcat( font, "\\ulldash" );
-			break;
+	// Long dashed underline
+	case 8:
+		font << "\\ulldash";
+		break;
 
-		// Thick underline
-		case 9:
-			strcat( font, "\\ulth" );
-			break;
+	// Thick underline
+	case 9:
+		font << "\\ulth";
+		break;
 
-		// Thick dotted underline
-		case 10:
-			strcat( font, "\\ulthd" );
-			break;
+	// Thick dotted underline
+	case 10:
+		font << "\\ulthd";
+		break;
 
-		// Thick dashed underline
-		case 11:
-			strcat( font, "\\ulthdash" );
-			break;
+	// Thick dashed underline
+	case 11:
+		font << "\\ulthdash";
+		break;
 
-		// Thick dash-dotted underline
-		case 12:
-			strcat( font, "\\ulthdashd" );
-			break;
+	// Thick dash-dotted underline
+	case 12:
+		font << "\\ulthdashd";
+		break;
 
-		// Thick dash-dot-dotted underline
-		case 13:
-			strcat( font, "\\ulthdashdd" );
-			break;
+	// Thick dash-dot-dotted underline
+	case 13:
+		font << "\\ulthdashdd";
+		break;
 
-		// Thick long dashed underline
-		case 14:
-			strcat( font, "\\ulthldash" );
-			break;
+	// Thick long dashed underline
+	case 14:
+		font << "\\ulthldash";
+		break;
 
-		// Double wave underline
-		case 15:
-			strcat( font, "\\ululdbwave" );
-			break;
+	// Double wave underline
+	case 15:
+		font << "\\ululdbwave";
+		break;
 
-		// Word underline
-		case 16:
-			strcat( font, "\\ulw" );
-			break;
+	// Word underline
+	case 16:
+		font << "\\ulw";
+		break;
 
-		// Wave underline
-		case 17:
-			strcat( font, "\\ulwave" );
-			break;
+	// Wave underline
+	case 17:
+		font << "\\ulwave";
+		break;
 	}
 
-	char txt[20] = "";
 	// Set paragraph tabbed text
 	if ( _ParFormat.tabbedText == false )
 	{
-		sprintf( rtfText, "\n%s\\fi%d\\li%d\\ri%d\\sb%d\\sa%d\\sl%d%s %s", text, 
-			_ParFormat.firstLineIndent, _ParFormat.leftIndent, _ParFormat.rightIndent, _ParFormat.spaceBefore, 
-			_ParFormat.spaceAfter, _ParFormat.lineSpacing, font, _ParFormat.paragraphText );
+		rtfText
+			<< "\n"
+			<< text.str()
+			<< "\\fi" << _ParFormat.firstLineIndent
+			<< "\\li" << _ParFormat.leftIndent     
+			<< "\\ri" << _ParFormat.rightIndent    
+			<< "\\sb" << _ParFormat.spaceBefore    
+			<< "\\sa" << _ParFormat.spaceAfter     
+			<< "\\sl" << _ParFormat.lineSpacing    
+			<< font.str()
+			<< " "
+			<< _ParFormat.paragraphText;
 	}
 	else
-		sprintf( rtfText, "\\tab %s", _ParFormat.paragraphText );
+	{
+		rtfText << "\\tab " << _ParFormat.paragraphText;
+	}
 
 	// Writes RTF paragraph formatting properties
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		result = false;
+	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
 
 	// Return error flag
 	return result;
@@ -1264,10 +1295,11 @@ int rtf_writer::end_tablecell()
 	int error = RTF_SUCCESS;
 
 	// Writes RTF table data
-	char rtfText[1024];
-	strcpy( rtfText, "\n\\cell " );
-	if ( fwrite( rtfText, 1, strlen(rtfText), _File ) < strlen(rtfText) )
-		error = RTF_TABLE_ERROR;
+	std::ostringstream rtfText;
+
+	rtfText << "\n\\cell ";
+	fwrite( rtfText.str().c_str(), 1, rtfText.str().size(), _File );
+
 
 	// Return error flag
 	return error;

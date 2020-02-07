@@ -36,8 +36,8 @@ public:
 
 	// RTF library global params
 	FILE* _File;
-	std::ostringstream _FontTable ;
-	std::ostringstream _ColorTable;
+	std::string _FontTable ;
+	std::string _ColorTable;
 
 public:
 	rtf_writer();
