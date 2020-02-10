@@ -27,7 +27,7 @@ void rtf_writer_test (void)
 	rtf.open();
 
 	//-----------------------------------------------------------------------
-#if 1
+#if 0
 	rtf.start_section();
 
 	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
@@ -83,6 +83,7 @@ void rtf_writer_test (void)
 	
 	sf->sectionBreak = RTF_SECTIONBREAK_PAGE;
 	rtf.start_section();
+	sf->sectionBreak = RTF_SECTIONBREAK_CONTINUOUS;
 	rtf.start_paragraph( "", true );
 	rtf.start_paragraph( "ÇÑ±Û3a", false );
 	rtf.start_paragraph( "First section:", true );
@@ -90,7 +91,7 @@ void rtf_writer_test (void)
 
 #endif
 
-#if 0
+#if 1
 	//-----------------------------------------------------------------------
 	// Write paragraph text
 	rtf.start_paragraph( "First section:", false );

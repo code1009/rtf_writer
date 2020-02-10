@@ -329,8 +329,8 @@ void rtf_writer::set_defaultformat()
 	pf.CHARACTER.subscriptCharacter    = false;
 	pf.CHARACTER.superscriptCharacter  = false;
 	pf.CHARACTER.underlineCharacter    = 0;
-//	pf.NUMS.numsChar  = char(0x95);
-	pf.NUMS.numsChar  = char(0xb7);
+	pf.NUMS.numsChar  = char(0x95);
+//	pf.NUMS.numsChar  = char(0xb7);
 	pf.NUMS.numsLevel = 11;
 	pf.NUMS.numsSpace = 360;
 	pf.SHADING.shadingBkColor   = 0;
