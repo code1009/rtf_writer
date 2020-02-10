@@ -248,7 +248,6 @@ void rtf_writer::add_font(char* facename, int codepage, int charset)
 		<< "\\fnil"
 		;
 
-	if (0!=charset)
 	{
 		rtfText
 		<< "\\fcharset" << charset
