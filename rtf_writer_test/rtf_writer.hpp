@@ -64,7 +64,7 @@ public:
 	~rtf_writer();
 
 public:
-	std::string rtf_writer::to_129 (std::string l);
+	std::string rtf_writer::to_escape_string (std::string l);
 
 public:
 	void initialize (void);

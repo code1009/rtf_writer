@@ -28,7 +28,7 @@ rtf_writer::~rtf_writer()
 {
 }
 
-std::string rtf_writer::to_129 (std::string l)
+std::string rtf_writer::to_escape_string (std::string l)
 {
 	std::string h;
 
@@ -264,7 +264,7 @@ void rtf_writer::add_font(char* facename, int codepage, int charset)
 
 	rtfText
 		<< " "
-		<< to_129(facename)
+		<< to_escape_string(facename)
 		<< "}"
 		;
 
@@ -329,7 +329,8 @@ void rtf_writer::set_defaultformat()
 	pf.CHARACTER.subscriptCharacter    = false;
 	pf.CHARACTER.superscriptCharacter  = false;
 	pf.CHARACTER.underlineCharacter    = 0;
-	pf.NUMS.numsChar  = char(0x95);
+//	pf.NUMS.numsChar  = char(0x95);
+	pf.NUMS.numsChar  = char(0xb7);
 	pf.NUMS.numsLevel = 11;
 	pf.NUMS.numsSpace = 360;
 	pf.SHADING.shadingBkColor   = 0;
@@ -668,7 +669,7 @@ void rtf_writer::write_paragraphformat()
 			<< "{\\*\\pn"
 			<< "\\pnlvl"   << _ParFormat.NUMS.numsLevel
 			<< "\\pnsp"    << _ParFormat.NUMS.numsSpace
-			<< "\\pntxtb " << _ParFormat.NUMS.numsChar 
+			<< "\\pntxtb " << to_escape_string(std::string (&_ParFormat.NUMS.numsChar,1))
 			<< "}"
 			;
 	}
@@ -909,11 +910,11 @@ void rtf_writer::write_paragraphformat()
 			<< "\\sl" << _ParFormat.lineSpacing    
 			<< font.str()
 			<< " "
-			<< to_129(_ParagraphText);
+			<< to_escape_string(_ParagraphText);
 	}
 	else
 	{
-		rtfText << "\\tab " << to_129(_ParagraphText);
+		rtfText << "\\tab " << to_escape_string(_ParagraphText);
 	}
 
 	// Writes RTF paragraph formatting properties

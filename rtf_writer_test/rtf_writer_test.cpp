@@ -1,7 +1,3 @@
-// 
-// http://www.biblioscape.com/rtf15_spec.htm
-//
-
 #include "stdafx.h"
 
 #include "rtf_writer.hpp"
@@ -18,65 +14,91 @@ void rtf_writer_test (void)
 
 	// Set RTF document font and color table
 	rtf.initialize();
+
 	rtf.reset_fonttable();
 	rtf.reset_colortable();
 	rtf.add_font("굴림", 0, 129);
-
+	rtf.add_color(0,0,0);
+	rtf.add_color(255,255,255);
+	rtf.add_color(255,0,0);
+	rtf.add_color(0,255,0);
+	rtf.add_color(0,0,255);
 	// Open RTF
 	rtf.open();
 
 	//-----------------------------------------------------------------------
-	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
-	rf->rowHeight = 50;
-	rf->marginTop    = 0;
-	rf->marginBottom = 0;
-	rf->marginLeft   = 0;
-	rf->marginRight  = 0;
+#if 1
+/*
+	sf->cols = false;
+	sf->colsDistance    = 360;
+	sf->colsLineBetween = false;
+	sf->colsNumber      = 2;
 
-	// Format table cell
-	cf->textVerticalAligment = RTF_CELLTEXTALIGN_CENTER;
-	cf->textDirection        = RTF_CELLTEXTDIRECTION_LRTB;
-	cf->borderBottom.border              = true;
-	cf->borderBottom.BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf->borderBottom.BORDERS.borderWidth = 1;
-	cf->borderLeft  .border              = true;
-	cf->borderLeft  .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf->borderLeft  .BORDERS.borderWidth = 1;
-	cf->borderRight .border              = true;
-	cf->borderRight .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf->borderRight .BORDERS.borderWidth = 1;
-	cf->borderTop   .border              = true;
-	cf->borderTop   .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
-	cf->borderTop   .BORDERS.borderWidth = 1;
-	cf->cellShading            = true;
-	cf->SHADING.shadingType    = RTF_CELLSHADINGTYPE_FILL;
-	cf->SHADING.shadingBkColor = 4;
+	rtf.start_section();
+	*/
+
+	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
+	rf->marginTop    =120;
+	rf->marginBottom =120;
+	rf->marginLeft   =120;
+	rf->marginRight  =120;
 
 	rtf.start_tablerow();
 	{
+	// Format table cell
+		cf->textVerticalAligment = RTF_CELLTEXTALIGN_CENTER;
+		cf->textDirection        = RTF_CELLTEXTDIRECTION_LRTB;
+		cf->borderBottom.border              = true;
+		cf->borderBottom.BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+		cf->borderBottom.BORDERS.borderWidth = 5;
+		cf->borderLeft  .border              = true;
+		cf->borderLeft  .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+		cf->borderLeft  .BORDERS.borderWidth = 5;
+		cf->borderRight .border              = true;
+		cf->borderRight .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+		cf->borderRight .BORDERS.borderWidth = 30;
+		cf->borderTop   .border              = true;
+		cf->borderTop   .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
+		cf->borderTop   .BORDERS.borderWidth = 5;
+		cf->cellShading            = true;
+		cf->SHADING.shadingType    = RTF_CELLSHADINGTYPE_FILL;
+		cf->SHADING.shadingBkColor = 3;
+
+
+
 		rtf.start_tablecell(2000);
-		{
-			rtf.start_paragraph( "한글1", false );
+		{			
+				pf->tableText = true;
+				pf->paragraphAligment = RTF_PARAGRAPHALIGN_JUSTIFY;
+
+			rtf.start_paragraph( "한글1a", false );
+			rtf.start_paragraph( "한글a", true );
 		}
-		rtf.end_tablecell();
 		rtf.start_tablecell(4000);
 		{
-			rtf.start_paragraph( "한글2", false );
+			rtf.start_paragraph( "한글2a", false );
+			rtf.start_paragraph( "한글a", true );
 		}
-		rtf.end_tablecell();
+		/*
 		rtf.start_tablecell(6000);
 		{
-			rtf.start_paragraph( "한글3", false );
+			rtf.start_paragraph( "한글3a", false );
+			rtf.start_paragraph( "한글a", true );
 		}
+		rtf.end_tablecell();
+		*/
+		rtf.end_tablecell();
 		rtf.end_tablecell();
 	}
 	rtf.end_tablerow();
-	rtf.start_paragraph( "", false );
-	rtf.start_paragraph( "", false );
-	rtf.start_paragraph( "", false );
-	rtf.start_paragraph( "", false );
-	rtf.start_paragraph( "", false );
+	rtf.start_paragraph( "", true );
+	rtf.start_paragraph( "", true );
+	rtf.start_paragraph( "", true );
+	rtf.start_paragraph( "", true );
+	rtf.start_paragraph( "", true );
+#endif
 
+#if 0
 	//-----------------------------------------------------------------------
 	// Write paragraph text
 	rtf.start_paragraph( "First section:", false );
@@ -235,7 +257,7 @@ void rtf_writer_test (void)
 	pf->spaceAfter  = 0;
 	pf->NUMS.numsLevel = 11;
 	pf->NUMS.numsSpace = 360;
-	pf->NUMS.numsChar  = char(0x95);
+//	pf->NUMS.numsChar  = char(0x95);
 	// Write paragraph text (bulleted)
 	rtf.start_paragraph( "Bulleted text1", false );
 	rtf.start_paragraph( "Bulleted text2", true );
@@ -274,7 +296,9 @@ void rtf_writer_test (void)
 	// Format paragraph
 	pf->spaceBefore = 0;
 	pf->spaceAfter  = 0;
+#endif
 
+#if 1
 	// Format table row
 	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
 	rf->marginTop    = 120;
@@ -308,11 +332,11 @@ void rtf_writer_test (void)
 		rtf.start_tablecell(2000);
 		{
 			// Format table cell
-			cf->borderLeft .BORDERS.borderWidth = 30;
-			cf->borderRight.BORDERS.borderWidth = 5;
+//			cf->borderLeft .BORDERS.borderWidth = 30;
+//			cf->borderRight.BORDERS.borderWidth = 5;
 
 			// Start table cell
-			cf->SHADING.shadingBkColor = 2;
+//			cf->SHADING.shadingBkColor = 2;
 			rtf.start_tablecell(4000);
 			{
 				// Format paragraph
@@ -357,6 +381,7 @@ void rtf_writer_test (void)
 	}
 	// End table row
 	rtf.end_tablerow();
+#endif
 
 	//-----------------------------------------------------------------------
 	// Close RTF
