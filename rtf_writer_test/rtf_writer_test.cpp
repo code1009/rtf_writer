@@ -38,7 +38,7 @@ void rtf_writer_test (void)
 
 	rtf.start_tablerow();
 	{
-	// Format table cell
+		// Format table cell
 		cf->textVerticalAligment = RTF_CELLTEXTALIGN_CENTER;
 		cf->textDirection        = RTF_CELLTEXTDIRECTION_LRTB;
 		cf->borderBottom.border              = true;
@@ -53,20 +53,23 @@ void rtf_writer_test (void)
 		cf->borderTop   .border              = true;
 		cf->borderTop   .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
 		cf->borderTop   .BORDERS.borderWidth = 5;
-		cf->cellShading            = true;
-		cf->SHADING.shadingType    = RTF_CELLSHADINGTYPE_FILL;
-		cf->SHADING.shadingBkColor = 4;
+		cf->cellShading              = true;
+		cf->SHADING.shadingType      = RTF_CELLSHADINGTYPE_FILL;
+		cf->SHADING.shadingBkColor   = 4;
+		cf->SHADING.shadingFillColor = 3;
 
-
+		pf->tableText = true;
+//		pf->paragraphAligment = RTF_PARAGRAPHALIGN_JUSTIFY;
+		pf->CHARACTER.foregroundColor = 1;
+		pf->CHARACTER.fontSize = 20;
 
 		rtf.start_tablecell(2000);
 		rtf.start_tablecell(4000);
 		rtf.start_tablecell(6000);
-			pf->tableText = true;
-//			pf->paragraphAligment = RTF_PARAGRAPHALIGN_JUSTIFY;
 			rtf.start_paragraph( "한글1a", false );
 			rtf.start_paragraph( "한글a", true );
 		rtf.end_tablecell();
+			pf->CHARACTER.foregroundColor = 0;
 			rtf.start_paragraph( "한글2a", false );
 			rtf.start_paragraph( "한글a", true );
 		rtf.end_tablecell();
@@ -76,9 +79,11 @@ void rtf_writer_test (void)
 	}
 	rtf.end_tablerow();
 	pf->tableText = false;
+	rtf.start_paragraph( "", true );
 	
-
+	sf->sectionBreak = RTF_SECTIONBREAK_PAGE;
 	rtf.start_section();
+	rtf.start_paragraph( "", true );
 	rtf.start_paragraph( "한글3a", false );
 	rtf.start_paragraph( "First section:", true );
 
