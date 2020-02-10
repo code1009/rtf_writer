@@ -22,20 +22,13 @@ void rtf_writer_test (void)
 	rtf.add_color(255,255,255);
 	rtf.add_color(255,0,0);
 	rtf.add_color(0,255,0);
-	rtf.add_color(0,0,255);
+	rtf.add_color(128,128,255);
 	// Open RTF
 	rtf.open();
 
 	//-----------------------------------------------------------------------
 #if 1
-/*
-	sf->cols = false;
-	sf->colsDistance    = 360;
-	sf->colsLineBetween = false;
-	sf->colsNumber      = 2;
-
 	rtf.start_section();
-	*/
 
 	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
 	rf->marginTop    =120;
@@ -56,46 +49,40 @@ void rtf_writer_test (void)
 		cf->borderLeft  .BORDERS.borderWidth = 5;
 		cf->borderRight .border              = true;
 		cf->borderRight .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
-		cf->borderRight .BORDERS.borderWidth = 30;
+		cf->borderRight .BORDERS.borderWidth = 5;
 		cf->borderTop   .border              = true;
 		cf->borderTop   .BORDERS.borderType  = RTF_PARAGRAPHBORDERTYPE_STHICK;
 		cf->borderTop   .BORDERS.borderWidth = 5;
 		cf->cellShading            = true;
 		cf->SHADING.shadingType    = RTF_CELLSHADINGTYPE_FILL;
-		cf->SHADING.shadingBkColor = 3;
+		cf->SHADING.shadingBkColor = 4;
 
 
 
 		rtf.start_tablecell(2000);
-		{			
-				pf->tableText = true;
-				pf->paragraphAligment = RTF_PARAGRAPHALIGN_JUSTIFY;
-
+		rtf.start_tablecell(4000);
+		rtf.start_tablecell(6000);
+			pf->tableText = true;
+//			pf->paragraphAligment = RTF_PARAGRAPHALIGN_JUSTIFY;
 			rtf.start_paragraph( "한글1a", false );
 			rtf.start_paragraph( "한글a", true );
-		}
-		rtf.start_tablecell(4000);
-		{
+		rtf.end_tablecell();
 			rtf.start_paragraph( "한글2a", false );
 			rtf.start_paragraph( "한글a", true );
-		}
-		/*
-		rtf.start_tablecell(6000);
-		{
-			rtf.start_paragraph( "한글3a", false );
+		rtf.end_tablecell();
+			rtf.start_paragraph( "한글2a", false );
 			rtf.start_paragraph( "한글a", true );
-		}
-		rtf.end_tablecell();
-		*/
-		rtf.end_tablecell();
 		rtf.end_tablecell();
 	}
 	rtf.end_tablerow();
-	rtf.start_paragraph( "", true );
-	rtf.start_paragraph( "", true );
-	rtf.start_paragraph( "", true );
-	rtf.start_paragraph( "", true );
-	rtf.start_paragraph( "", true );
+	pf->tableText = false;
+	
+
+	rtf.start_section();
+	rtf.start_paragraph( "한글3a", false );
+	rtf.start_paragraph( "First section:", true );
+
+
 #endif
 
 #if 0
@@ -296,9 +283,7 @@ void rtf_writer_test (void)
 	// Format paragraph
 	pf->spaceBefore = 0;
 	pf->spaceAfter  = 0;
-#endif
 
-#if 1
 	// Format table row
 	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
 	rf->marginTop    = 120;
@@ -332,11 +317,11 @@ void rtf_writer_test (void)
 		rtf.start_tablecell(2000);
 		{
 			// Format table cell
-//			cf->borderLeft .BORDERS.borderWidth = 30;
-//			cf->borderRight.BORDERS.borderWidth = 5;
+			cf->borderLeft .BORDERS.borderWidth = 30;
+			cf->borderRight.BORDERS.borderWidth = 5;
 
 			// Start table cell
-//			cf->SHADING.shadingBkColor = 2;
+			cf->SHADING.shadingBkColor = 2;
 			rtf.start_tablecell(4000);
 			{
 				// Format paragraph
@@ -379,6 +364,7 @@ void rtf_writer_test (void)
 		// End table cell
 		rtf.end_tablecell();
 	}
+
 	// End table row
 	rtf.end_tablerow();
 #endif
