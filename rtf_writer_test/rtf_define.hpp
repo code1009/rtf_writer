@@ -14,16 +14,12 @@ LanguageID=ko-kr:1042
 #define RTF_DEFAULT_CODEPAGE     1252
 #define RTF_DEFAULT_LANGUAGEID   1033
 #define RTF_DEFAULT_LANGUAGEIDFE 0
-
-#define RTF_DEFAULT_FONT_CHARSET 0
 #endif
 
 #if 1
 #define RTF_DEFAULT_CODEPAGE     949
 #define RTF_DEFAULT_LANGUAGEID   1033
 #define RTF_DEFAULT_LANGUAGEIDFE 1042
-
-#define RTF_DEFAULT_FONT_CHARSET 129
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

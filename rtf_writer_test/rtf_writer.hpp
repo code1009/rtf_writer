@@ -74,9 +74,15 @@ public:
 	void close (); // Closes RTF document
 		 
 public:	 
-	void set_defaultfont   (); // Sets default RTF document font
-	void set_defaultcolor  (); // Sets default RTF document color
-	void set_defaultformat (); // Sets default RTF document formatting
+	void set_defaultfonttable  (); // Sets default RTF document font
+	void set_defaultcolortable (); // Sets default RTF document color
+	void set_defaultformat     (); // Sets default RTF document formatting
+
+	void set_defaultdocumentformat  ();
+	void set_defaultsectionformat   ();
+	void set_defaultparagraphformat ();
+	void set_defaulttablerowformat  ();
+	void set_defaulttablecellformat ();
 
 public:
 	void reset_fonttable();
@@ -97,12 +103,16 @@ public:
 	void                  set_tablecellformat  (RTF_TABLECELL_FORMAT* cf); // Sets RTF table cell formatting properties
 
 public:
-	void write_header         ();                                             // Writes RTF document header
-	void write_documentformat ();                                             // Writes RTF document formatting properties
-	void write_sectionformat  ();                                             // Writes RTF section formatting properties
+	void write_header         (); // Writes RTF document header
+	void write_documentformat (); // Writes RTF document formatting properties
+	void write_sectionformat  (); // Writes RTF section formatting properties
+	void write_paragraphformat(); // Writes RTF paragraph formatting properties
+
+public:
 	void start_section        ();                                             // Starts new RTF section
-	void write_paragraphformat();                                             // Writes RTF paragraph formatting properties
 	void start_paragraph      (char* text, bool newPar=false);                // Starts new RTF paragraph
+
+public:
 	void start_tablerow       ();                                             // Starts new RTF table row
 	void end_tablerow         ();                                             // Ends RTF table row
 	void start_tablecell      (int rightMargin);                              // Starts new RTF table cell

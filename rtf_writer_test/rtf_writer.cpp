@@ -87,8 +87,8 @@ std::string rtf_writer::to_escape_string (std::string l)
 void rtf_writer::initialize()
 {
 	// Initialize global params
-	set_defaultfont();
-	set_defaultcolor();
+	set_defaultfonttable();
+	set_defaultcolortable();
 	set_defaultformat();
 }
 
@@ -178,7 +178,7 @@ void rtf_writer::write_header()
 	_oss << rtfText.str();
 }
 
-void rtf_writer::set_defaultfont()
+void rtf_writer::set_defaultfonttable()
 {
 	std::ostringstream rtfText;
 
@@ -197,7 +197,7 @@ void rtf_writer::set_defaultfont()
 	_FontCount = 7;
 }
 
-void rtf_writer::set_defaultcolor()
+void rtf_writer::set_defaultcolortable()
 {
 	std::ostringstream rtfText;
 
@@ -292,14 +292,29 @@ void rtf_writer::add_color(int r, int g, int b)
 // Sets default RTF document formatting
 void rtf_writer::set_defaultformat()
 {
+	set_defaultdocumentformat  ();
+	set_defaultsectionformat   ();
+	set_defaultparagraphformat ();
+	set_defaulttablerowformat  ();
+	set_defaulttablecellformat ();
+}
+
+void rtf_writer::set_defaultdocumentformat ()
+{
 	// Set default RTF document formatting properties
 	RTF_DOCUMENT_FORMAT df = {RTF_DOCUMENTVIEWKIND_PAGE, 100, 12240, 15840, 1800, 1800, 1440, 1440, false, 0, false};
 	set_documentformat(&df);
+}
 
+void rtf_writer::set_defaultsectionformat ()
+{
 	// Set default RTF section formatting properties
 	RTF_SECTION_FORMAT sf = {RTF_SECTIONBREAK_CONTINUOUS, false, true, 12240, 15840, 1800, 1800, 1440, 1440, 0, 720, 720, false, 720, 720, false, 1, 720, false};
 	set_sectionformat(&sf);
+}
 
+void rtf_writer::set_defaultparagraphformat ()
+{
 	// Set default RTF paragraph formatting properties
 	RTF_PARAGRAPH_FORMAT pf = {RTF_PARAGRAPHBREAK_NONE, false, true, RTF_PARAGRAPHALIGN_LEFT, 0, 0, 0, 0, 0, 0, /*NULL,*/ false, false, false, false, false, false};
 	pf.BORDERS.borderColor = 0;
@@ -340,11 +355,17 @@ void rtf_writer::set_defaultformat()
 	pf.TABS.tabLead     = RTF_PARAGRAPHTABLEAD_NONE;
 	pf.TABS.tabPosition = 0;
 	set_paragraphformat(&pf);
+}
 
+void rtf_writer::set_defaulttablerowformat ()
+{
 	// Set default RTF table row formatting properties
 	RTF_TABLEROW_FORMAT rf = {RTF_ROWTEXTALIGN_LEFT, 0, 0, 0, 0, 0, 0};
 	set_tablerowformat(&rf);
+}
 
+void rtf_writer::set_defaulttablecellformat ()
+{
 	// Set default RTF table cell formatting properties
 	RTF_TABLECELL_FORMAT cf = {RTF_CELLTEXTALIGN_CENTER, 0, 0, 0, 0, RTF_CELLTEXTDIRECTION_LRTB, false};
 	cf.SHADING.shadingBkColor   = 0;
@@ -377,7 +398,6 @@ void rtf_writer::set_defaultformat()
 	cf.borderTop   .BORDERS.borderWidth = 5;
 	set_tablecellformat(&cf);
 }
-
 
 // Sets RTF document formatting properties
 void rtf_writer::set_documentformat(RTF_DOCUMENT_FORMAT* df)

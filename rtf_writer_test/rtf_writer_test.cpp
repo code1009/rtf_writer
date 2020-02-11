@@ -23,11 +23,25 @@ void rtf_writer_test (void)
 	rtf.add_color(255,0,0);
 	rtf.add_color(0,255,0);
 	rtf.add_color(128,128,255);
+
 	// Open RTF
 	rtf.open();
 
 	//-----------------------------------------------------------------------
-#if 0
+#if 1
+	rtf.start_section();
+
+	pf->paragraphNums     = true;
+	pf->paragraphAligment = RTF_PARAGRAPHALIGN_LEFT;
+	pf->spaceBefore = 0;
+	pf->spaceAfter  = 0;
+	pf->NUMS.numsLevel = 11;
+	pf->NUMS.numsSpace = 360;
+//	pf->NUMS.numsChar  = char(0x95);
+	rtf.start_paragraph( "ÇÑ±Û3a", false );
+	rtf.start_paragraph( "First section:", true );
+	rtf.set_defaultparagraphformat();
+
 	rtf.start_section();
 
 	rf->rowAligment = RTF_ROWTEXTALIGN_CENTER;
